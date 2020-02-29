@@ -14,13 +14,13 @@ typedef uint8_t state_id_t;
 typedef struct {
     transition_id_t transition_id;   /*< transition identifier */
     state_id_t      target_state;    /*< target state (when predictable) */
-    bool            predicable;      /*< is transition predictable (depends only on current state) */
+    bool            predictable;      /*< is transition predictable (depends only on current state) */
 } transition_spec_t;
 
 
 typedef struct {
     state_id_t      state;
-    transition_id_t transition;
+    transition_spec_t transition[]; /*< this table length is max_transition_per_state length */
 } automaton_transition_t;
 
 /* contexts are opaque contents, upper layer get back a handler, corresponding to the
@@ -36,6 +36,7 @@ typedef uint8_t automaton_ctx_handler_t;
 mbed_error_t automaton_declare_context(__in  const uint8_t num_states,
                                        __in  const uint8_t num_transition,
                                        __in  const uint8_t max_transition_per_state,
+                                       __in  const automaton_transition_t *const * const state_automaton,
                                        __out automaton_ctx_handler_t *ctxh);
 
 state_id_t automaton_get_state(__in  const automaton_ctx_handler_t ctxh,
@@ -47,7 +48,7 @@ mbed_error_t automaton_set_state(const automaton_ctx_handler_t ctxh,
 mbed_error_t automaton_get_next_state(__in  const automaton_ctx_handler_t     ctxh,
                                       __in  const state_id_t                  current_state,
                                       __in  const transition_id_t             transition,
-                                      __out state_id_t                       *newstate __attribute__((unused)));
+                                      __out state_id_t                       *newstate);
 
 bool automaton_is_valid_transition(__in  const automaton_ctx_handler_t     ctxh,
                                    __in  const state_id_t                  current_state,

@@ -56,7 +56,9 @@ typedef struct {
     uint8_t             transition_number;          /*< number of transition for automaton */
     volatile state_id_t state;                      /*< current state */
     uint8_t             max_transitions_per_state;  /*< max number of transition per state */
+    const automaton_transition_t * const * state_automaton; /*< declared state automaton */
     volatile uint32_t   state_lock;                /*< state WR access lock */
+
 } automaton_context_t;
 
 typedef struct {
@@ -132,6 +134,7 @@ mbed_error_t automaton_initialize(void)
 mbed_error_t automaton_declare_context(__in  const uint8_t num_states,
                                        __in  const uint8_t num_transition,
                                        __in  const uint8_t max_transition_per_state,
+                                       __in  const automaton_transition_t * const * const state_automaton,
                                        __out automaton_ctx_handler_t *ctxh)
 {
     mbed_error_t errcode = MBED_ERROR_NONE;
@@ -156,6 +159,7 @@ mbed_error_t automaton_declare_context(__in  const uint8_t num_states,
     ctx->state_number = num_states;
     ctx->transition_number = num_transition;
     ctx->max_transitions_per_state = max_transition_per_state;
+    ctx->state_automaton = state_automaton;
 
     mutex_unlock(&ctx_vector.lock);
 
@@ -238,7 +242,7 @@ err:
 mbed_error_t automaton_get_next_state(__in  const automaton_ctx_handler_t     ctxh,
                                       __in  const state_id_t                  current_state,
                                       __in  const transition_id_t             transition,
-                                      __out state_id_t                       *newstate __attribute__((unused)))
+                                      __out state_id_t                       *newstate)
 {
     mbed_error_t errcode = MBED_ERROR_NONE;
     automaton_context_t *ctx = NULL;
@@ -260,7 +264,17 @@ mbed_error_t automaton_get_next_state(__in  const automaton_ctx_handler_t     ct
         goto err;
     }
 
-    /* TODO: get next state on state automaton */
+    for (uint8_t i = 0; i < ctx->max_transitions_per_state; ++i) {
+        if (ctx->state_automaton[ctx->state]->transition[i].transition_id == transition) {
+            if (ctx->state_automaton[ctx->state]->transition[i].predictable) {
+                *newstate = ctx->state_automaton[ctx->state]->transition[i].target_state;
+                goto err;
+            } else {
+                errcode = MBED_ERROR_UNKNOWN;
+                goto err;
+            }
+        }
+    }
 err:
     return errcode;
 }
@@ -296,6 +310,13 @@ bool automaton_is_valid_transition(__in  const automaton_ctx_handler_t     ctxh,
     }
 
     /* TODO: get next state on state automaton */
+    for (uint8_t i = 0; i < ctx->max_transitions_per_state; ++i) {
+        if (ctx->state_automaton[ctx->state]->transition[i].transition_id == transition) {
+            result = true;
+            goto err;
+        }
+    }
+
 err:
     return result;
 }
