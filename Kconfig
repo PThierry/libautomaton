@@ -1,0 +1,29 @@
+config USR_LIB_AUTOMATON
+  bool  "userspace generic state automaton"
+  default y
+  ---help---
+  Support for generic, secure and reentrent state automaton
+
+if USR_LIB_AUTOMATON
+
+menu "Automaton options"
+
+config USR_LIB_AUTOMATON_DEBUG
+  int "Automaton debug informations level"
+  default 0
+  range 0 1
+  ---help---
+  Automaton debug level. Supported levels are:
+    * 0: no debug
+    * 1: state change information debug
+
+config USR_LIB_AUTOMATON_MAX_CONTEXT_NUM
+   int "Max number of contexts handled by libautomaton"
+   default 4
+   range 1 32
+   ---help---
+   Specify the number of automaton contexts the libautomaton can handle in the same time.
+
+endmenu
+
+endif
