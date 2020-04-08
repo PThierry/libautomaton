@@ -24,6 +24,16 @@ config USR_LIB_AUTOMATON_MAX_CONTEXT_NUM
    ---help---
    Specify the number of automaton contexts the libautomaton can handle in the same time.
 
+config USR_LIB_AUTOMATON_DATA_INTEGRITY
+   bool "Enable data integrity check in automaton contexts"
+   default n
+
+config USR_LIB_AUTOMATON_CONTROL_FLOW_INTEGRITY
+   bool "Enable data integrity check in automaton contexts"
+   default n
+
+
+
 endmenu
 
 endif

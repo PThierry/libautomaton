@@ -6,7 +6,9 @@
  * Generic state automaton types  definition
  ***************************************************************/
 
-
+/*
+ *
+ */
 typedef uint8_t transition_id_t;
 typedef uint8_t state_id_t;
 

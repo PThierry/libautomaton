@@ -23,7 +23,9 @@ APP_BUILD_DIR = $(BUILD_DIR)/libs/$(LIB_NAME)
 ###################################################################
 
 CFLAGS += $(LIBS_CFLAGS)
-CFLAGS += -MMD -MP -O3
+# we add -O0 to keep secure if and various security add-ons in the C
+# code removed by compiler optimizers
+CFLAGS += -MMD -MP -O0
 
 #############################################################
 # About library sources
