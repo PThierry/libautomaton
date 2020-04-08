@@ -3,7 +3,7 @@
 ###################################################################
 
 # library name, without extension
-LIB_NAME ?= libusbhid
+LIB_NAME ?= libautomaton
 
 # project root directory, relative to app dir
 PROJ_FILES = ../../
