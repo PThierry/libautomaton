@@ -29,9 +29,24 @@ config USR_LIB_AUTOMATON_DATA_INTEGRITY
    default n
 
 config USR_LIB_AUTOMATON_CONTROL_FLOW_INTEGRITY
+   bool "Enable automaton control flow integrity"
+   default n
+   ---help---
+   Add advanced mechanism to verify that the overall automaton sequence is respectfull of
+   the formal automaton definition. This mechanisms detects fault attack that may generate
+   execution of currently unreachable states or transitions.
+   This mechanism *does not* protect against checkpoint passing jump (i.e. transition to
+   a reachable, formally valid, state withtout executing a previously required state.
+
+
+config USR_LIB_AUTOMATON_HANDLE_CHECKPOINTS
    bool "Enable data integrity check in automaton contexts"
    default n
-
+   ---help---
+   Add checkpoints validation for critical states. This is a complementary mechanism to the
+   CFI. For each critical state (defined by the application), a list of checkpoint states
+   is defined and the automaton verifies that all of them have been previously reached at
+   least one time before entering the critical state.
 
 
 endmenu

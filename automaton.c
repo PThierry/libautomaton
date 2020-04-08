@@ -34,14 +34,6 @@
 #endif
 
 /*
- * secure boolean, not exactly inverted, with a Hamming distance long enough
- */
-typedef enum {
-    SECURE_FALSE = 0xacefaecf,
-    SECURE_TRUE =  0xca38c3e8
-} secure_bool_t;
-
-/*
  * Due to secure automaton properties, only 16 states are supported.
  * This sould be enough for most of existing state automaton.
  * If more state are requested, the state_translation_tab[] must be increased.
@@ -136,6 +128,16 @@ static const secure_transition_id_t transition_translate_tab[] = {
     0x031a97402caaf6a8,
 };
 
+#if CONFIG_USR_LIB_AUTOMATON_CONTROL_FLOW_INTEGRITY
+typedef struct {
+    secure_state_id_t  state;
+    secure_state_id_t  next_state;
+    transition_id_t    transition;
+# if CONFIG_USR_LIB_AUTOMATON_DATA_INTEGRITY_CHECK
+    uint32_t           crc;
+# endif
+} automaton_transition_request_t;
+#endif
 
 
 /****************************************************************
@@ -163,8 +165,8 @@ typedef struct {
     uint32_t            crc;
 #endif
 #if CONFIG_USR_LIB_AUTOMATON_CONTROL_FLOW_INTEGRITY
-    volatile uint64_t   controlflow;
-    volatile uint64_t   currentflow;
+    volatile automaton_transition_request_t    req;
+    volatile secure_bool_t           waiting_req;
 #endif
 } automaton_context_t;
 
@@ -183,21 +185,6 @@ static volatile automaton_ctx_vector_t ctx_vector = { 0 };
 /**********************************************
  * automaton local utility functions
  *********************************************/
-
-#if CONFIG_USR_LIB_AUTOMATON_CONTROL_FLOW_INTEGRITY
-static inline void update_controlflowvar(volatile uint64_t *var, uint32_t value)
-{
-    /* atomic local update of the control flow var.
-     * FIXME: addition is problematic because it does not ensure that
-     * previous states has been executed in the correct order, but only
-     * that they **all** have been executed. Though, as each state check for
-     * the control flow, the order is checked. Althgouh, a mathematical
-     * primitive ensuring variation (successive CRC ? other ?) would be better. */
-    *var += crc32((unsigned char*)&value, sizeof(value), 0xffffffff);
-
-}
-#endif
-
 
 
 /* About context vector handling */
@@ -346,14 +333,14 @@ mbed_error_t automaton_declare_context(__in  const uint8_t num_states,
     /* hardened if */
     if (crc != crc_ctx &&
         !(crc == crc_ctx)) {
-        log_printf("[automaton] invalid data integrity check: crc32: %x != %x\n", crc, crc_ctx);
+        log_printf("[automaton] %s:invalid data integrity check: crc32: %x != %x\n", __func__, crc, crc_ctx);
         errcode = MBED_ERROR_WRERROR;
         goto err;
     }
 #endif
 #if CONFIG_USR_LIB_AUTOMATON_CONTROL_FLOW_INTEGRITY
-    get_random((unsigned char*)&ctx->controlflow, sizeof(ctx->controlflow));
-    ctx->currentflow = ctx->controlflow;
+    memset((void*)&ctx->req, 0x0, sizeof(automaton_transition_request_t));
+    ctx->waiting_req = SECURE_FALSE;
 #endif
     ctx_vector.ctx_num++;
 err:
@@ -492,9 +479,9 @@ err:
  *
  * \return true if the transition request is allowed for this state, or false
  */
-bool automaton_is_valid_transition(__in  const automaton_ctx_handler_t     ctxh,
-                                   __in  const state_id_t                  current_state,
-                                   __in  const transition_id_t             transition)
+secure_bool_t automaton_is_valid_transition(__in  const automaton_ctx_handler_t     ctxh,
+                                            __in  const state_id_t                  current_state,
+                                            __in  const transition_id_t             transition)
 {
     bool result = false;
     automaton_context_t *ctx = NULL;
@@ -535,51 +522,214 @@ err:
     return result;
 }
 
+
+/* INFO: CFI on FSM can be done, here, only on predictable state automaton (i.e. an
+ * automaton for which all (state,transition) pair generate a single, unique target
+ * state.
+ * If the target state depends on an external entity (a variable for exemple), the
+ * CFI can't be correctly executed because it can't be properly post-checked.
+ */
 #if CONFIG_USR_LIB_AUTOMATON_CONTROL_FLOW_INTEGRITY
-secbool automaton_calculate_flowstate(const  automaton_context_t * const ctx,
-                                      state_id_t prevstate,
-                                      state_id_t nextstate)
+/*
+ * Push a transition request to the automaton context
+ */
+mbed_error_t automaton_push_transition_request(const automaton_ctx_handler_t ctxh,
+                                               const transition_id_t req)
 {
-    /*
-     * Here, we recalculate from scratch, based on the prevstate/nextstate pair
-     * (which **must** be unique) to current controlflow value.
-     * We use the flow control sequence set in .rodata to successively increment
-     * myflow up to the state pair we should be on.
-     * The caller function can then compare the result of this function with
-     * loader_update_flowstate(). If the results are the same, the control flow is
-     * keeped. If not, the control flow is corrupted.
-     */
-    /* 1. init myflow to seed */
-    uint64_t myflow = (uint64_t)ctx->controlflow;
-    /* 3. found state pair ? add nextstate en return */
-    // To update to support loops, unpredictable cases and so on.
-    // To do that, we must color the reverse path, of a state, memorise it and
-    // calculate the reverse-reverse path from the root node.
-    // The other method is to keep the memory of each state reached somewhere in
-    // a stack allowing the full calculation
-    prevstate = prevstate;
-
-    update_controlflowvar(&myflow, automaton_convert_state(nextstate));
-
-    log_printf("%s: result of online calculation (%d sequences) is (long long) %ll\n", __func__, i, myflow);
-    /* TODO: how to harden u64 comparison ? */
-    if (myflow != ctx->currentflow) {
-        /* control flow error detected */
-        log_printf("Error in control flow ! Fault injection detected !\n");
-        return SECURE_FALSE;
+    /* errcode, default fail */
+    mbed_error_t errcode = MBED_ERROR_INVPARAM;
+    automaton_context_t *ctx = NULL;
+    /* sanitize */
+    /* the first initialization steps are not hardened as a fault on these if will simply generated
+     * a memory fault */
+    if (ctx_vector.initialized != SECURE_FALSE) {
+        goto err;
     }
-    return SECURE_TRUE;
+    if (!automaton_ctx_exists(ctxh)) {
+        goto err;
+    }
+    ctx = automaton_get_context(ctxh);
+    if (ctx->waiting_req == SECURE_TRUE &&
+        !(ctx->waiting_req != SECURE_TRUE)) {
+        errcode = MBED_ERROR_INVSTATE;
+        goto err;
+    }
+
+    /* in requests, we use secure states, not basic states identifiers, making requests harder to
+     * corrupt */
+    state_id_t unsecure_state;
+    if (automaton_get_state(ctxh, &unsecure_state) != MBED_ERROR_NONE) {
+        errcode = MBED_ERROR_UNKNOWN;
+        goto err;
+    }
+    ctx->req.state = automaton_convert_state(unsecure_state);
+    if (automaton_get_next_state(ctxh, automaton_convert_secure_state(ctx->req.state), req, &unsecure_state) != MBED_ERROR_NONE) {
+        log_printf("[AUTOMATON] unable to execute CFI on unpredictable state automaton !\n");
+        errcode = MBED_ERROR_INVSTATE;
+        goto err;
+    }
+    ctx->req.next_state = automaton_convert_state(unsecure_state);
+
+    ctx->req.transition = req;
+#if CONFIG_USR_LIB_AUTOMATON_DATA_INTEGRITY_CHECK
+    uint32_t crc = 0xffffffff;
+    crc = crc32((unsigned char*)&(ctx->req.state), sizeof(secure_state_id_t), crc);
+    crc = crc32((unsigned char*)&(ctx->req.next_state), sizeof(secure_state_id_t), crc);
+    crc = crc32((unsigned char*)&(ctx->req.transition), sizeof(transition_id_t), crc);
+    /* assign */
+    ctx->req.crc = crc;
+    /* check assignation */
+    if (ctx->req.crc != crc &&
+        !(ctx->req.crc == crc)) {
+        log_printf("[automaton] %s:invalid data integrity check: crc32: %x != %x\n", __func__, crc, crc_ctx);
+        errcode = MBED_ERROR_WRERROR;
+        goto err;
+    }
+#endif
+err:
+    return errcode;
 }
 
-void automaton_update_flowstate(automaton_context_t *ctx, state_id_t nextstate)
+mbed_error_t automaton_execute_transition_request(const automaton_ctx_handler_t ctxh)
 {
-    /* here, we update current flow in order to add the current state to the previous
-     * flow sequence, by adding its state value to the currentflow variable */
-    /* calculation may be more complex to avoid any collision risk. Is there a way
-     * through cryptographic calculation on state value concatenation to avoid any
-     * risk ? */
-    update_controlflowvar(&ctx->currentflow, automaton_convert_state(nextstate));
-    log_printf("%s: update controlflow to (long long) %ll\n", __func__, ctx->currentflow);
+    /* errcode, default fail */
+    mbed_error_t errcode = MBED_ERROR_INVPARAM;
+    automaton_context_t *ctx = NULL;
+    /* sanitize */
+    /* the first initialization steps are not hardened as a fault on these if will simply generated
+     * a memory fault */
+    if (ctx_vector.initialized != SECURE_FALSE) {
+        goto err;
+    }
+    if (!automaton_ctx_exists(ctxh)) {
+        goto err;
+    }
+    ctx = automaton_get_context(ctxh);
+    if (ctx->waiting_req == SECURE_FALSE &&
+        !(ctx->waiting_req != SECURE_FALSE)) {
+        errcode = MBED_ERROR_INVSTATE;
+        goto err;
+    }
 
+#if CONFIG_USR_LIB_AUTOMATON_DATA_INTEGRITY_CHECK
+    uint32_t crc = 0xffffffff;
+    crc = crc32((unsigned char*)&(ctx->req.state), sizeof(secure_state_id_t), crc);
+    crc = crc32((unsigned char*)&(ctx->req.next_state), sizeof(secure_state_id_t), crc);
+    crc = crc32((unsigned char*)&(ctx->req.transition), sizeof(transition_id_t), crc);
+    if (ctx->req.crc != crc &&
+        !(ctx->req.crc == crc)) {
+        log_printf("[automaton] %s:invalid data integrity check: crc32: %x != %x\n", __func__, crc, crc_ctx);
+        errcode = MBED_ERROR_RDERROR;
+        goto err;
+    }
+#endif
+    /* input data validated. Check that transition is valid from the automaton point of
+     * vue */
+    secure_state_id_t state = ctx->req.state;
+    secure_state_id_t next_state = ctx->req.next_state;
+    transition_id_t transition = ctx->req.transition;
+
+    secure_state_id_t current_state = ctx->state;
+    if (state != current_state) {
+        log_printf("[automaton] %s:transition from invalid starting state: %x\n", __func__, state);
+        errcode = MBED_ERROR_INVSTATE;
+        goto err;
+    }
+    /*secure if */
+    if (automaton_is_valid_transition(ctxh, state, transition) != SECURE_TRUE &&
+        !(automaton_is_valid_transition(ctxh, state, transition) == SECURE_TRUE)) {
+        log_printf("[automaton] %s:transition invalid in current state: %x\n", __func__, transition);
+        errcode = MBED_ERROR_INVSTATE;
+        goto err;
+    }
+    state_id_t next_state_unsecure;
+    if (automaton_get_next_state(ctxh, automaton_convert_secure_state(ctx->req.state), ctx->req.transition, &(next_state_unsecure)) != MBED_ERROR_NONE) {
+        log_printf("[automaton] unable to execute CFI on unpredictable state automaton !\n");
+        errcode = MBED_ERROR_INVSTATE;
+        goto err;
+    }
+    if (next_state_unsecure != automaton_convert_secure_state(next_state)) {
+        log_printf("[automaton] invalid target state %x!\n", __func__, next_state);
+        errcode = MBED_ERROR_INVSTATE;
+        goto err;
+    }
+
+    /* we can set the new state now */
+    if (automaton_set_state(ctxh, next_state_unsecure) != MBED_ERROR_NONE) {
+        errcode = MBED_ERROR_WRERROR;
+        goto err;
+    }
+    errcode = MBED_ERROR_NONE;
+err:
+    return errcode;
+}
+
+mbed_error_t automaton_postcheck_transition_request(const automaton_ctx_handler_t ctxh)
+{
+    /* errcode, default fail */
+    mbed_error_t errcode = MBED_ERROR_INVPARAM;
+    automaton_context_t *ctx = NULL;
+    /* sanitize */
+    /* the first initialization steps are not hardened as a fault on these if will simply generated
+     * a memory fault */
+    if (ctx_vector.initialized != SECURE_FALSE) {
+        goto err;
+    }
+    if (!automaton_ctx_exists(ctxh)) {
+        goto err;
+    }
+    ctx = automaton_get_context(ctxh);
+    if (ctx->waiting_req == SECURE_FALSE &&
+        !(ctx->waiting_req != SECURE_FALSE)) {
+        errcode = MBED_ERROR_INVSTATE;
+        goto err;
+    }
+#if CONFIG_USR_LIB_AUTOMATON_DATA_INTEGRITY_CHECK
+    /* check current context integrity */
+    uint32_t crc = 0xffffffff;
+    crc = crc32((unsigned char*)&(ctx->req.state), sizeof(secure_state_id_t), crc);
+    crc = crc32((unsigned char*)&(ctx->req.next_state), sizeof(secure_state_id_t), crc);
+    crc = crc32((unsigned char*)&(ctx->req.transition), sizeof(transition_id_t), crc);
+    if (ctx->req.crc != crc &&
+        !(ctx->req.crc == crc)) {
+        log_printf("[automaton] %s:invalid data integrity check: crc32: %x != %x\n", __func__, crc, crc_ctx);
+        errcode = MBED_ERROR_RDERROR;
+        goto err;
+    }
+#endif
+    /* get back current context */
+    secure_state_id_t next_state = ctx->req.next_state;
+
+    /* make sure that previous transition is a valid transition to the current context
+     *  1. transition is valid
+     *  2. transition targets current state (not another one)
+     */
+    secure_state_id_t current_state = ctx->state;
+    if (next_state != current_state) {
+        log_printf("[automaton] %s:posthook: transition to different target state: %x\n", __func__, state);
+        errcode = MBED_ERROR_INVSTATE;
+        goto err;
+    }
+    state_id_t next_state_unsecure;
+    if (automaton_get_next_state(ctxh, automaton_convert_secure_state(ctx->req.state), ctx->req.transition, &(next_state_unsecure)) != MBED_ERROR_NONE) {
+        log_printf("[automaton] unable to execute CFI on unpredictable state automaton !\n");
+        errcode = MBED_ERROR_INVSTATE;
+        goto err;
+    }
+    if (next_state_unsecure != automaton_convert_secure_state(next_state)) {
+        log_printf("[automaton] invalid target state for previous transition %x!\n", __func__, next_state);
+        errcode = MBED_ERROR_INVSTATE;
+        goto err;
+    }
+
+    /* cleanup previous transition */
+    memset((void*)&ctx->req, 0x0, sizeof(automaton_transition_request_t));
+    ctx->waiting_req = SECURE_FALSE;
+    errcode = MBED_ERROR_NONE;
+err:
+    return errcode;
 }
 #endif
+
+
+

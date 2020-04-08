@@ -7,6 +7,15 @@
  ***************************************************************/
 
 /*
+ * secure boolean, not exactly inverted, with a Hamming distance long enough
+ */
+typedef enum {
+    SECURE_FALSE = 0xacefaecf,
+    SECURE_TRUE =  0xca38c3e8
+} secure_bool_t;
+
+
+/*
  *
  */
 typedef uint8_t transition_id_t;
@@ -52,6 +61,47 @@ mbed_error_t automaton_get_next_state(__in  const automaton_ctx_handler_t     ct
                                       __in  const transition_id_t             transition,
                                       __out state_id_t                       *newstate);
 
-bool automaton_is_valid_transition(__in  const automaton_ctx_handler_t     ctxh,
-                                   __in  const state_id_t                  current_state,
-                                   __in  const transition_id_t             transition);
+secure_bool_t automaton_is_valid_transition(__in  const automaton_ctx_handler_t     ctxh,
+                                            __in  const state_id_t                  current_state,
+                                            __in  const transition_id_t             transition);
+
+
+/****************************************************************
+ * CFI specific automaton API
+ ***************************************************************/
+
+/*
+ * push a transition request to the state automaton, by indicating the transition
+ * identifier. States are handled by the automaton itself.
+ * Pushing the transition request *does not* modify the automaton current state, but
+ * only push a transition request flag into the automaton context.
+ * This flag is handled by the automaton_execute_transition_request() function.
+ *
+ * This function is typically called at the begining of the main automaton loop of the
+ * application.
+ */
+mbed_error_t automaton_push_transition_request(const automaton_ctx_handler_t ctxh,
+                                               const transition_id_t req);
+
+
+/*
+ * Execute a previously pushed transition request.
+ * The transition integrity and conformity to the current automaton state is checked.
+ * The state automaton is updated to the target state of the transition if the transition
+ * is valid.
+ *
+ * This function is typically executed in each transition function.
+ */
+mbed_error_t automaton_execute_transition_request(const automaton_ctx_handler_t ctxh);
+
+
+/*
+ * postcheck that the previous transition has been executed properly. This function is
+ * executed *after* the transition function. It is a post-validation check which validate
+ * that the previously required transition comes from a valid state to the current state,
+ * and clean the previously required transition.
+ *
+ * This function is typically executed at the end of the main automaton loop of the
+ * application.
+ */
+mbed_error_t automaton_postcheck_transition_request(const automaton_ctx_handler_t ctxh);
