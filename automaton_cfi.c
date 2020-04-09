@@ -1,6 +1,7 @@
 #include "automaton_cfi.h"
 #include "automaton.h"
-#include "string.h"
+#include "automaton_data_integrity.h"
+#include "libc/string.h"
 
 
 /* INFO: CFI on FSM can be done, here, only on predictable state automaton (i.e. an

@@ -52,14 +52,14 @@ mbed_error_t automaton_calculate_context_integrity(__in  const automaton_context
  * Calculate requests integrity. The request integrity is calculated and returned to the crc variable.
  * This variable must be stored in the request integrity field.
  */
-mbed_error_t automaton_calculate_request_integrity(__in  const automaton_transition_request_t * const req,
-                                                   __out uint32_t                         *crc);
+mbed_error_t automaton_calculate_request_integrity(__in  volatile const automaton_transition_request_t * const req,
+                                                   __out volatile uint32_t                *crc);
 
 /*
  * Check request integrity. The request integrity must be previously calculated and store
  * in order to get a valid comparison with an initialized integrity field
  */
-secure_bool_t automaton_check_request_integrity(__in const automaton_transition_request_t * const req);
+secure_bool_t automaton_check_request_integrity(__in volatile const automaton_transition_request_t * const req);
 
 #endif/*!CONFIG_USR_LIB_AUTOMATON_DATA_INTEGRITY_CHECK*/
 

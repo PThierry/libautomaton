@@ -13,10 +13,10 @@ secure_bool_t automaton_check_context_integrity(__in const automaton_context_t *
         goto err;
     }
     uint32_t crc_ctx = 0xffffffff;
-    crc_ctx = crc32((unsigned char*)&ctx->state_number, sizeof(num_states), crc_ctx);
-    crc_ctx = crc32((unsigned char*)&ctx->transition_number, sizeof(num_transition), crc_ctx);
-    crc_ctx = crc32((unsigned char*)&ctx->max_transitions_per_state, sizeof(max_transitions_per_state), crc_ctx);
-    crc_ctx = crc32((unsigned char*)&ctx->state_automaton, sizeof(state_automaton), crc_ctx);
+    crc_ctx = crc32((unsigned char*)&ctx->state_number, sizeof(uint8_t), crc_ctx);
+    crc_ctx = crc32((unsigned char*)&ctx->transition_number, sizeof(uint8_t), crc_ctx);
+    crc_ctx = crc32((unsigned char*)&ctx->max_transitions_per_state, sizeof(uint8_t), crc_ctx);
+    crc_ctx = crc32((unsigned char*)&ctx->state_automaton, sizeof(void*), crc_ctx);
     /*hardened if */
     if (ctx->crc != crc_ctx &&
         !(ctx->crc == crc_ctx)) {
@@ -40,10 +40,10 @@ mbed_error_t automaton_calculate_context_integrity(__in  const automaton_context
     }
 
     uint32_t crc_ctx = 0xffffffff;
-    crc_ctx = crc32((unsigned char*)&ctx->state_number, sizeof(num_states), crc_ctx);
-    crc_ctx = crc32((unsigned char*)&ctx->transition_number, sizeof(num_transition), crc_ctx);
-    crc_ctx = crc32((unsigned char*)&ctx->max_transitions_per_state, sizeof(max_transitions_per_state), crc_ctx);
-    crc_ctx = crc32((unsigned char*)&ctx->state_automaton, sizeof(state_automaton), crc_ctx);
+    crc_ctx = crc32((unsigned char*)&ctx->state_number, sizeof(uint8_t), crc_ctx);
+    crc_ctx = crc32((unsigned char*)&ctx->transition_number, sizeof(uint8_t), crc_ctx);
+    crc_ctx = crc32((unsigned char*)&ctx->max_transitions_per_state, sizeof(uint8_t), crc_ctx);
+    crc_ctx = crc32((unsigned char*)&ctx->state_automaton, sizeof(void*), crc_ctx);
 
     *crc = crc_ctx;
     errcode = MBED_ERROR_NONE;
@@ -52,7 +52,7 @@ err:
 }
 
 
-secure_bool_t automaton_check_request_integrity(__in const automaton_transition_request_t * const req)
+secure_bool_t automaton_check_request_integrity(__in volatile const automaton_transition_request_t * const req)
 {
     secure_bool_t result = SECURE_FALSE;
     /* sanitize */
@@ -76,8 +76,8 @@ err:
 }
 
 
-mbed_error_t automaton_calculate_request_integrity(__in  const automaton_transition_request_t * const req,
-                                                   __out uint32_t                         *crc)
+mbed_error_t automaton_calculate_request_integrity(__in  volatile const automaton_transition_request_t * const req,
+                                                   __out volatile uint32_t                 *crc)
 {
     mbed_error_t errcode = MBED_ERROR_INVPARAM;
     /* sanitize */
@@ -87,9 +87,9 @@ mbed_error_t automaton_calculate_request_integrity(__in  const automaton_transit
 
     /* check current context integrity */
     uint32_t crc_req = 0xffffffff;
-    crc = crc32((unsigned char*)&(req->state), sizeof(secure_state_id_t), crc_req);
-    crc = crc32((unsigned char*)&(req->next_state), sizeof(secure_state_id_t), crc_req);
-    crc = crc32((unsigned char*)&(req->transition), sizeof(transition_id_t), crc_req);
+    crc_req = crc32((unsigned char*)&(req->state), sizeof(secure_state_id_t), crc_req);
+    crc_req = crc32((unsigned char*)&(req->next_state), sizeof(secure_state_id_t), crc_req);
+    crc_req = crc32((unsigned char*)&(req->transition), sizeof(transition_id_t), crc_req);
 
     *crc = crc_req;
     errcode = MBED_ERROR_NONE;
