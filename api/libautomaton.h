@@ -1,3 +1,30 @@
+/*
+ *
+ * Copyright 2020 The wookey project team <wookey@ssi.gouv.fr>
+ *   - Ryad     Benadjila
+ *   - Arnauld  Michelizza
+ *   - Mathieu  Renard
+ *   - Philippe Thierry
+ *   - Philippe Trebuchet
+ *
+ * This package is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published
+ * the Free Software Foundation; either version 3 of the License, or (at
+ * ur option) any later version.
+ *
+ * This package is distributed in the hope that it will be useful, but WITHOUT ANY
+ * WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+ * PARTICULAR PURPOSE. See the GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this package; if not, write to the Free Software Foundation, Inc., 51
+ * Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
+ *
+ */
+
+
+#ifndef LIBAUTOMATON_H_
+#define LIBAUTOMATON_H_
 
 #include "autoconf.h"
 #include "libc/types.h"
@@ -105,3 +132,5 @@ mbed_error_t automaton_execute_transition_request(const automaton_ctx_handler_t 
  * application.
  */
 mbed_error_t automaton_postcheck_transition_request(const automaton_ctx_handler_t ctxh);
+
+#endif/*!LIBAUTOMATON_H_*/

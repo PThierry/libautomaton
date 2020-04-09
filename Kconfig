@@ -26,7 +26,11 @@ config USR_LIB_AUTOMATON_MAX_CONTEXT_NUM
 
 config USR_LIB_AUTOMATON_DATA_INTEGRITY
    bool "Enable data integrity check in automaton contexts"
+   select USR_LIB_FIRMWARE
    default n
+   ---help---
+   Add integrity check on automaton context access, to detect memory corruption due to
+   software overflow or various hardware or software memory corruption techniques.
 
 config USR_LIB_AUTOMATON_CONTROL_FLOW_INTEGRITY
    bool "Enable automaton control flow integrity"

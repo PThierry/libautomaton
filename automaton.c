@@ -28,37 +28,12 @@
 #include "libc/string.h"
 #include "libc/semaphore.h"
 #include "libc/random.h"
+#include "automaton_data_integrity.h"
+#include "automaton.h"
 
-#if CONFIG_USR_LIB_AUTOMATON_DATA_INTEGRITY_CHECK || CONFIG_USR_LIB_AUTOMATON_CONTROL_FLOW_INTEGRITY
+#if CONFIG_USR_LIB_AUTOMATON_CONTROL_FLOW_INTEGRITY
 #include "libfw.h"
 #endif
-
-/*
- * Due to secure automaton properties, only 16 states are supported.
- * This sould be enough for most of existing state automaton.
- * If more state are requested, the state_translation_tab[] must be increased.
- */
-#define MAX_AUTOMATON_STATES 16
-
-/*
- * Due to secure automaton properties, only 32 transitions are supported.
- * This sould be enough for most of existing state automaton.
- * If more transitions are requested, the transition_translation_tab[] must be increased.
- */
-#define MAX_AUTOMATON_TRANSITIONS 32
-
-#define AUTOMATON_DEBUG CONFIG_USR_LIB_AUTOMATON_DEBUG
-
-#if AUTOMATON_DEBUG
-# define log_printf(...) printf(__VA_ARGS__)
-#else
-# define log_printf(...)
-#endif
-
-
-typedef uint32_t secure_state_id_t;
-typedef uint64_t secure_transition_id_t;
-
 
 
 /*
@@ -128,54 +103,10 @@ static const secure_transition_id_t transition_translate_tab[] = {
     0x031a97402caaf6a8,
 };
 
-#if CONFIG_USR_LIB_AUTOMATON_CONTROL_FLOW_INTEGRITY
-typedef struct {
-    secure_state_id_t  state;
-    secure_state_id_t  next_state;
-    transition_id_t    transition;
-# if CONFIG_USR_LIB_AUTOMATON_DATA_INTEGRITY_CHECK
-    uint32_t           crc;
-# endif
-} automaton_transition_request_t;
-#endif
-
-
 /****************************************************************
  * state automaton formal definition and associate utility
  * functions
  ***************************************************************/
-
-/*
- * The libautomaton is reentrant and associated to contexts. This allows
- * a given tasks to handle as many context as needed.
- *
- * The automaton state is volatile and support preemption.
- * TODO: a lock on state write must be added to support properly reentrancy
- * (i.e. blocking ? we hould decide about ISR case)
- */
-typedef struct {
-    uint8_t             state_number;               /*< number of state for automaton */
-    uint8_t             transition_number;          /*< number of transition for automaton */
-    volatile secure_state_id_t state;                      /*< current state */
-    uint8_t             max_transitions_per_state;  /*< max number of transition per state */
-    const automaton_transition_t * const * state_automaton; /*< declared state automaton */
-    volatile uint32_t   state_lock;                /*< state WR access lock */
-
-#if CONFIG_USR_LIB_AUTOMATON_DATA_INTEGRITY_CHECK
-    uint32_t            crc;
-#endif
-#if CONFIG_USR_LIB_AUTOMATON_CONTROL_FLOW_INTEGRITY
-    volatile automaton_transition_request_t    req;
-    volatile secure_bool_t           waiting_req;
-#endif
-} automaton_context_t;
-
-typedef struct {
-    volatile uint32_t   lock;
-    uint8_t             ctx_num;
-    secure_bool_t       initialized;
-    automaton_context_t contexts[CONFIG_USR_LIB_AUTOMATON_MAX_CONTEXT_NUM];
-} automaton_ctx_vector_t;
 
 /*
  * all set to 0. By default, global libautomaton context is set as not initialized.
@@ -188,15 +119,18 @@ static volatile automaton_ctx_vector_t ctx_vector = { 0 };
 
 
 /* About context vector handling */
-static inline secure_bool_t automaton_ctx_exists(const automaton_ctx_handler_t ctxh)
+secure_bool_t automaton_ctx_exists(const automaton_ctx_handler_t ctxh)
 {
-    if (ctxh >= ctx_vector.ctx_num) {
-        return false;
+    if (ctx_vector.initialized != SECURE_TRUE) {
+        return SECURE_FALSE;
     }
-    return true;
+    if (ctxh >= ctx_vector.ctx_num) {
+        return SECURE_FALSE;
+    }
+    return SECURE_TRUE;
 }
 
-static inline automaton_context_t *automaton_get_context(const automaton_ctx_handler_t ctxh)
+automaton_context_t *automaton_get_context(const automaton_ctx_handler_t ctxh)
 {
     /* here we consider ctxh valid, as this function is called internally in the
      * automaton libs, where ctxh is check *before* this call */
@@ -205,7 +139,7 @@ static inline automaton_context_t *automaton_get_context(const automaton_ctx_han
 
 
 /* About a given context automaton handling */
-static inline secure_bool_t automaton_state_exists(const automaton_context_t * const ctx, const state_id_t state)
+secure_bool_t automaton_state_exists(const automaton_context_t * const ctx, const state_id_t state)
 {
     if (state >= ctx->state_number) {
         return false;
@@ -213,7 +147,7 @@ static inline secure_bool_t automaton_state_exists(const automaton_context_t * c
     return true;
 }
 
-static inline secure_bool_t automaton_transition_exists(const automaton_context_t * const ctx, const transition_id_t transition)
+secure_bool_t automaton_transition_exists(const automaton_context_t * const ctx, const transition_id_t transition)
 {
     if (transition >= ctx->transition_number) {
         return false;
@@ -222,7 +156,7 @@ static inline secure_bool_t automaton_transition_exists(const automaton_context_
 }
 
 
-static secure_state_id_t automaton_convert_state(state_id_t state)
+secure_state_id_t automaton_convert_state(state_id_t state)
 {
     if (state < MAX_AUTOMATON_STATES) {
         return state_translate_tab[state];
@@ -230,7 +164,7 @@ static secure_state_id_t automaton_convert_state(state_id_t state)
     return 0;
 }
 
-static secure_transition_id_t automaton_convert_transition(transition_id_t transition)
+secure_transition_id_t automaton_convert_transition(transition_id_t transition)
 {
     if (transition < MAX_AUTOMATON_TRANSITIONS) {
         return transition_translate_tab[transition];
@@ -238,7 +172,7 @@ static secure_transition_id_t automaton_convert_transition(transition_id_t trans
     return 0;
 }
 
-static state_id_t automaton_convert_secure_state(secure_state_id_t state)
+state_id_t automaton_convert_secure_state(secure_state_id_t state)
 {
     for (uint8_t i = 0; i < MAX_AUTOMATON_STATES; ++i) {
         if (state_translate_tab[i] == state) {
@@ -249,7 +183,7 @@ static state_id_t automaton_convert_secure_state(secure_state_id_t state)
     return 0;
 }
 
-static transition_id_t automaton_convert_secure_transition(secure_transition_id_t transition)
+transition_id_t automaton_convert_secure_transition(secure_transition_id_t transition)
 {
     for (uint8_t i = 0; i < MAX_AUTOMATON_TRANSITIONS; ++i) {
         if (transition_translate_tab[i] == transition) {
@@ -320,21 +254,9 @@ mbed_error_t automaton_declare_context(__in  const uint8_t num_states,
     mutex_unlock(&ctx_vector.lock);
 
 #if CONFIG_USR_LIB_AUTOMATON_DATA_INTEGRITY_CHECK
-    uint32_t crc = 0xffffffff;
-    crc = crc32((unsigned char*)&num_states, sizeof(num_states), crc);
-    crc = crc32((unsigned char*)&num_transition, sizeof(num_transition), crc);
-    crc = crc32((unsigned char*)&max_transitions_per_state, sizeof(max_transitions_per_state), crc);
-    crc = crc32((unsigned char*)&state_automaton, sizeof(state_automaton), crc);
-    uint32_t crc_ctx = 0xffffffff;
-    crc_ctx = crc32((unsigned char*)&ctx->state_number, sizeof(num_states), crc_ctx);
-    crc_ctx = crc32((unsigned char*)&ctx->transition_number, sizeof(num_transition), crc_ctx);
-    crc_ctx = crc32((unsigned char*)&ctx->max_transitions_per_state, sizeof(max_transitions_per_state), crc_ctx);
-    crc_ctx = crc32((unsigned char*)&ctx->state_automaton, sizeof(state_automaton), crc_ctx);
-    /* hardened if */
-    if (crc != crc_ctx &&
-        !(crc == crc_ctx)) {
-        log_printf("[automaton] %s:invalid data integrity check: crc32: %x != %x\n", __func__, crc, crc_ctx);
-        errcode = MBED_ERROR_WRERROR;
+    if (automaton_calculate_context_integrity(ctx, &ctx->crc) != MBED_ERROR_NONE) {
+        log_printf("[automaton] %s:unable to calculate CRC!\n", __func__);
+        errcode = MBED_ERROR_UNKNOWN;
         goto err;
     }
 #endif
@@ -356,7 +278,7 @@ state_id_t automaton_get_state(__in  const automaton_ctx_handler_t ctxh,
     if (ctx_vector.initialized != SECURE_TRUE) {
         return MBED_ERROR_INVSTATE;
     }
-    if (!automaton_ctx_exists(ctxh)) {
+    if (automaton_ctx_exists(ctxh) != SECURE_TRUE) {
         errcode = MBED_ERROR_INVPARAM;
         goto err;
     }
@@ -381,7 +303,7 @@ mbed_error_t automaton_set_state(const automaton_ctx_handler_t ctxh,
     if (ctx_vector.initialized != SECURE_TRUE) {
         return MBED_ERROR_INVSTATE;
     }
-    if (!automaton_ctx_exists(ctxh)) {
+    if (automaton_ctx_exists(ctxh) != SECURE_TRUE) {
         errcode = MBED_ERROR_INVPARAM;
         goto err;
     }
@@ -437,7 +359,7 @@ mbed_error_t automaton_get_next_state(__in  const automaton_ctx_handler_t     ct
     if (ctx_vector.initialized != SECURE_TRUE) {
         return MBED_ERROR_INVSTATE;
     }
-    if (!automaton_ctx_exists(ctxh)) {
+    if (automaton_ctx_exists(ctxh) != SECURE_TRUE) {
         errcode = MBED_ERROR_INVPARAM;
         goto err;
     }
@@ -491,7 +413,7 @@ secure_bool_t automaton_is_valid_transition(__in  const automaton_ctx_handler_t 
     if (ctx_vector.initialized != SECURE_FALSE) {
         goto err;
     }
-    if (!automaton_ctx_exists(ctxh)) {
+    if (automaton_ctx_exists(ctxh) != SECURE_TRUE) {
         goto err;
     }
     ctx = automaton_get_context(ctxh);
@@ -521,215 +443,6 @@ secure_bool_t automaton_is_valid_transition(__in  const automaton_ctx_handler_t 
 err:
     return result;
 }
-
-
-/* INFO: CFI on FSM can be done, here, only on predictable state automaton (i.e. an
- * automaton for which all (state,transition) pair generate a single, unique target
- * state.
- * If the target state depends on an external entity (a variable for exemple), the
- * CFI can't be correctly executed because it can't be properly post-checked.
- */
-#if CONFIG_USR_LIB_AUTOMATON_CONTROL_FLOW_INTEGRITY
-/*
- * Push a transition request to the automaton context
- */
-mbed_error_t automaton_push_transition_request(const automaton_ctx_handler_t ctxh,
-                                               const transition_id_t req)
-{
-    /* errcode, default fail */
-    mbed_error_t errcode = MBED_ERROR_INVPARAM;
-    automaton_context_t *ctx = NULL;
-    /* sanitize */
-    /* the first initialization steps are not hardened as a fault on these if will simply generated
-     * a memory fault */
-    if (ctx_vector.initialized != SECURE_FALSE) {
-        goto err;
-    }
-    if (!automaton_ctx_exists(ctxh)) {
-        goto err;
-    }
-    ctx = automaton_get_context(ctxh);
-    if (ctx->waiting_req == SECURE_TRUE &&
-        !(ctx->waiting_req != SECURE_TRUE)) {
-        errcode = MBED_ERROR_INVSTATE;
-        goto err;
-    }
-
-    /* in requests, we use secure states, not basic states identifiers, making requests harder to
-     * corrupt */
-    state_id_t unsecure_state;
-    if (automaton_get_state(ctxh, &unsecure_state) != MBED_ERROR_NONE) {
-        errcode = MBED_ERROR_UNKNOWN;
-        goto err;
-    }
-    ctx->req.state = automaton_convert_state(unsecure_state);
-    if (automaton_get_next_state(ctxh, automaton_convert_secure_state(ctx->req.state), req, &unsecure_state) != MBED_ERROR_NONE) {
-        log_printf("[AUTOMATON] unable to execute CFI on unpredictable state automaton !\n");
-        errcode = MBED_ERROR_INVSTATE;
-        goto err;
-    }
-    ctx->req.next_state = automaton_convert_state(unsecure_state);
-
-    ctx->req.transition = req;
-#if CONFIG_USR_LIB_AUTOMATON_DATA_INTEGRITY_CHECK
-    uint32_t crc = 0xffffffff;
-    crc = crc32((unsigned char*)&(ctx->req.state), sizeof(secure_state_id_t), crc);
-    crc = crc32((unsigned char*)&(ctx->req.next_state), sizeof(secure_state_id_t), crc);
-    crc = crc32((unsigned char*)&(ctx->req.transition), sizeof(transition_id_t), crc);
-    /* assign */
-    ctx->req.crc = crc;
-    /* check assignation */
-    if (ctx->req.crc != crc &&
-        !(ctx->req.crc == crc)) {
-        log_printf("[automaton] %s:invalid data integrity check: crc32: %x != %x\n", __func__, crc, crc_ctx);
-        errcode = MBED_ERROR_WRERROR;
-        goto err;
-    }
-#endif
-err:
-    return errcode;
-}
-
-mbed_error_t automaton_execute_transition_request(const automaton_ctx_handler_t ctxh)
-{
-    /* errcode, default fail */
-    mbed_error_t errcode = MBED_ERROR_INVPARAM;
-    automaton_context_t *ctx = NULL;
-    /* sanitize */
-    /* the first initialization steps are not hardened as a fault on these if will simply generated
-     * a memory fault */
-    if (ctx_vector.initialized != SECURE_FALSE) {
-        goto err;
-    }
-    if (!automaton_ctx_exists(ctxh)) {
-        goto err;
-    }
-    ctx = automaton_get_context(ctxh);
-    if (ctx->waiting_req == SECURE_FALSE &&
-        !(ctx->waiting_req != SECURE_FALSE)) {
-        errcode = MBED_ERROR_INVSTATE;
-        goto err;
-    }
-
-#if CONFIG_USR_LIB_AUTOMATON_DATA_INTEGRITY_CHECK
-    uint32_t crc = 0xffffffff;
-    crc = crc32((unsigned char*)&(ctx->req.state), sizeof(secure_state_id_t), crc);
-    crc = crc32((unsigned char*)&(ctx->req.next_state), sizeof(secure_state_id_t), crc);
-    crc = crc32((unsigned char*)&(ctx->req.transition), sizeof(transition_id_t), crc);
-    if (ctx->req.crc != crc &&
-        !(ctx->req.crc == crc)) {
-        log_printf("[automaton] %s:invalid data integrity check: crc32: %x != %x\n", __func__, crc, crc_ctx);
-        errcode = MBED_ERROR_RDERROR;
-        goto err;
-    }
-#endif
-    /* input data validated. Check that transition is valid from the automaton point of
-     * vue */
-    secure_state_id_t state = ctx->req.state;
-    secure_state_id_t next_state = ctx->req.next_state;
-    transition_id_t transition = ctx->req.transition;
-
-    secure_state_id_t current_state = ctx->state;
-    if (state != current_state) {
-        log_printf("[automaton] %s:transition from invalid starting state: %x\n", __func__, state);
-        errcode = MBED_ERROR_INVSTATE;
-        goto err;
-    }
-    /*secure if */
-    if (automaton_is_valid_transition(ctxh, state, transition) != SECURE_TRUE &&
-        !(automaton_is_valid_transition(ctxh, state, transition) == SECURE_TRUE)) {
-        log_printf("[automaton] %s:transition invalid in current state: %x\n", __func__, transition);
-        errcode = MBED_ERROR_INVSTATE;
-        goto err;
-    }
-    state_id_t next_state_unsecure;
-    if (automaton_get_next_state(ctxh, automaton_convert_secure_state(ctx->req.state), ctx->req.transition, &(next_state_unsecure)) != MBED_ERROR_NONE) {
-        log_printf("[automaton] unable to execute CFI on unpredictable state automaton !\n");
-        errcode = MBED_ERROR_INVSTATE;
-        goto err;
-    }
-    if (next_state_unsecure != automaton_convert_secure_state(next_state)) {
-        log_printf("[automaton] invalid target state %x!\n", __func__, next_state);
-        errcode = MBED_ERROR_INVSTATE;
-        goto err;
-    }
-
-    /* we can set the new state now */
-    if (automaton_set_state(ctxh, next_state_unsecure) != MBED_ERROR_NONE) {
-        errcode = MBED_ERROR_WRERROR;
-        goto err;
-    }
-    errcode = MBED_ERROR_NONE;
-err:
-    return errcode;
-}
-
-mbed_error_t automaton_postcheck_transition_request(const automaton_ctx_handler_t ctxh)
-{
-    /* errcode, default fail */
-    mbed_error_t errcode = MBED_ERROR_INVPARAM;
-    automaton_context_t *ctx = NULL;
-    /* sanitize */
-    /* the first initialization steps are not hardened as a fault on these if will simply generated
-     * a memory fault */
-    if (ctx_vector.initialized != SECURE_FALSE) {
-        goto err;
-    }
-    if (!automaton_ctx_exists(ctxh)) {
-        goto err;
-    }
-    ctx = automaton_get_context(ctxh);
-    if (ctx->waiting_req == SECURE_FALSE &&
-        !(ctx->waiting_req != SECURE_FALSE)) {
-        errcode = MBED_ERROR_INVSTATE;
-        goto err;
-    }
-#if CONFIG_USR_LIB_AUTOMATON_DATA_INTEGRITY_CHECK
-    /* check current context integrity */
-    uint32_t crc = 0xffffffff;
-    crc = crc32((unsigned char*)&(ctx->req.state), sizeof(secure_state_id_t), crc);
-    crc = crc32((unsigned char*)&(ctx->req.next_state), sizeof(secure_state_id_t), crc);
-    crc = crc32((unsigned char*)&(ctx->req.transition), sizeof(transition_id_t), crc);
-    if (ctx->req.crc != crc &&
-        !(ctx->req.crc == crc)) {
-        log_printf("[automaton] %s:invalid data integrity check: crc32: %x != %x\n", __func__, crc, crc_ctx);
-        errcode = MBED_ERROR_RDERROR;
-        goto err;
-    }
-#endif
-    /* get back current context */
-    secure_state_id_t next_state = ctx->req.next_state;
-
-    /* make sure that previous transition is a valid transition to the current context
-     *  1. transition is valid
-     *  2. transition targets current state (not another one)
-     */
-    secure_state_id_t current_state = ctx->state;
-    if (next_state != current_state) {
-        log_printf("[automaton] %s:posthook: transition to different target state: %x\n", __func__, state);
-        errcode = MBED_ERROR_INVSTATE;
-        goto err;
-    }
-    state_id_t next_state_unsecure;
-    if (automaton_get_next_state(ctxh, automaton_convert_secure_state(ctx->req.state), ctx->req.transition, &(next_state_unsecure)) != MBED_ERROR_NONE) {
-        log_printf("[automaton] unable to execute CFI on unpredictable state automaton !\n");
-        errcode = MBED_ERROR_INVSTATE;
-        goto err;
-    }
-    if (next_state_unsecure != automaton_convert_secure_state(next_state)) {
-        log_printf("[automaton] invalid target state for previous transition %x!\n", __func__, next_state);
-        errcode = MBED_ERROR_INVSTATE;
-        goto err;
-    }
-
-    /* cleanup previous transition */
-    memset((void*)&ctx->req, 0x0, sizeof(automaton_transition_request_t));
-    ctx->waiting_req = SECURE_FALSE;
-    errcode = MBED_ERROR_NONE;
-err:
-    return errcode;
-}
-#endif
 
 
 
