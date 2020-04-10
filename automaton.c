@@ -625,4 +625,91 @@ err:
 }
 
 
+#if defined(__FRAMAC__)
+/*
+ * Support for Frama-C testing
+ */
+int main(void)
+{
 
+    /* we fix input data that are .rodata, stored in flash */
+    uint8_t num_states = 3;
+    uint8_t num_transitions = 4;
+    uint8_t max_trans_per_state = CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE;
+    automaton_ctx_handler_t ctxh = Frama_C_interval(0,255);
+
+    const automaton_transition_t automaton[] = {
+        { .state = 0,
+          .transition = {
+            {
+              .transition_id = 0,
+              .target_state  = 1,
+              .predictable   = true
+            },
+            {
+              .transition_id = 1,
+              .target_state  = 2,
+              .predictable   = true
+            }
+          }
+        },
+        { .state = 1,
+          .transition = {
+            {
+              .transition_id = 2,
+              .target_state  = 2,
+              .predictable   = true
+            },
+            { .transition_id = 0xff,
+              .target_state  = 0xff,
+              .predictable   = false
+            }
+          }
+        },
+        { .state = 2,
+          .transition = {
+            {
+              .transition_id = 3,
+              .target_state  = 0,
+              .predictable   = true
+            },
+            { .transition_id = 0xff,
+              .target_state  = 0xff,
+              .predictable   = false
+            }
+          }
+        }
+    };
+
+    automaton_initialize();
+    automaton_declare_context(num_states, num_transitions, max_trans_per_state, (automaton_transition_t const *const*)&automaton, &ctxh);
+
+
+   /* now, everything can be corrupted */
+
+    uint8_t cur_trans = Frama_C_interval(0, 255);
+
+    automaton_push_transition_request(ctxh, cur_trans);
+    switch(cur_trans) {
+        case 0: {
+            automaton_execute_transition_request(ctxh);
+        }
+        break;
+        case 1: {
+            automaton_execute_transition_request(ctxh);
+        }
+        break;
+        case 2: {
+            automaton_execute_transition_request(ctxh);
+        }
+        break;
+        case 3: {
+            automaton_execute_transition_request(ctxh);
+        }
+        break;
+        default:
+        break;
+    }
+    automaton_postcheck_transition_request(ctxh);
+}
+#endif

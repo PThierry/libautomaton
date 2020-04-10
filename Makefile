@@ -81,3 +81,47 @@ $(APP_BUILD_DIR):
 	$(call cmd,mkdir)
 
 -include $(DEP)
+
+#####################################################################
+# Frama-C
+#####################################################################
+
+SESSION:=frama-c-rte-val-wp.session
+JOBS:=$(shell nproc)
+TIMEOUT:=15
+
+# "-val-warn-undefined-pointer-comparison none" is to deal with the
+# checks (\pointer_comparable( - ,  - )) otherwise added by EVA before
+# our tests of pointers against NULL. Those are not understood by WP.
+# This is not an issue but should be revisited later. --arno
+#
+# See https://bts.frama-c.com/view.php?id=2206
+
+frama-c:
+	frama-c-gui automaton*.c -machdep x86_32 \
+	            -warn-left-shift-negative \
+	            -warn-right-shift-negative \
+	            -warn-signed-downcast \
+	            -warn-signed-overflow \
+	            -warn-unsigned-downcast \
+	            -warn-unsigned-overflow \
+				-kernel-msg-key pp \
+				-no-frama-c-stdlib \
+				-cpp-extra-args="-nostdinc -I../std/api -I../firmware/api -I../../include/generated -I../../drivers/socs/stm32f439/flash/api" \
+		    -rte \
+		    -eva \
+		    -wp-dynamic \
+		    -eva-slevel 1 \
+		    -eva-warn-undefined-pointer-comparison none \
+		    -then \
+		    -wp \
+		    -wp-dynamic \
+		    -wp-par $(JOBS) \
+		    -wp-steps 100000 -wp-depth 100000 -pp-annot \
+		    -wp-split -wp-literals \
+			-wp-timeout $(TIMEOUT) -save $(SESSION)
+
+frama-c-gui:
+	frama-c-gui -load $(SESSION)
+
+

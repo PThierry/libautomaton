@@ -5,6 +5,13 @@
 
 
 #if CONFIG_USR_LIB_AUTOMATON_DATA_INTEGRITY_CHECK
+/*@
+    behavior bad_entries:
+      assumes ctx == NULL;
+        assigns \nothing;
+        ensures \result == SECURE_FALSE;
+
+ */
 secure_bool_t automaton_check_context_integrity(__in const automaton_context_t * const ctx)
 {
     secure_bool_t result = SECURE_FALSE;
@@ -29,7 +36,17 @@ err:
     return result;
 }
 
+/*@
+    behavior bad_entries:
+      assumes !\valid(ctx) || !\valid(crc);
+        assigns \nothing;
+        ensures \result == MBED_ERROR_INVPARAM;
 
+    behavior good_entries:
+      assumes \valid(ctx) && \valid(crc);
+        assigns *crc;
+        ensures \result == MBED_ERROR_NONE;
+ */
 mbed_error_t automaton_calculate_context_integrity(__in  const automaton_context_t * const ctx,
                                                    __out uint32_t                         *crc)
 {
@@ -98,6 +115,3 @@ err:
 }
 
 #endif
-
-
-

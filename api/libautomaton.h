@@ -58,7 +58,7 @@ typedef struct {
 
 typedef struct {
     state_id_t      state;
-    transition_spec_t transition[]; /*< this table length is max_transition_per_state length */
+    transition_spec_t transition[CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE];
 } automaton_transition_t;
 
 /* contexts are opaque contents, upper layer get back a handler, corresponding to the
@@ -71,23 +71,59 @@ typedef uint8_t automaton_ctx_handler_t;
  * Generic state automaton API
  ***************************************************************/
 
+/*
+ * Initialize the automaton library. First function to call.
+ * All other functions of the API will fail while this function is not correctly executed.
+ */
+mbed_error_t automaton_initialize(void);
+
+/*
+ * Declare a new automaton in the libautomaton.
+ * An automaton is defined by:
+ * - its number of states
+ * - its number of transition
+ * - the maximum number of transitions per state
+ * These three informations define the size and structure of the automaton table formalism
+ * - the automaton table, containing each state and associated allowed transition
+ * - the automaton handler, set by the function on success
+ *
+ * \returns MBED_ERROR_NONE if the context register is made properly.
+ */
 mbed_error_t automaton_declare_context(__in  const uint8_t num_states,
                                        __in  const uint8_t num_transition,
                                        __in  const uint8_t max_transition_per_state,
                                        __in  const automaton_transition_t *const * const state_automaton,
                                        __out automaton_ctx_handler_t *ctxh);
 
+/*
+ * Get the current automaton state for the given automaton handler
+ */
 state_id_t automaton_get_state(__in  const automaton_ctx_handler_t ctxh,
                                __out state_id_t                   *state);
 
+/*
+ * Set a new state for the automaton. Executed by transition request functions.
+ * This function is made only if CFI is *disabled*. When using CFI (see below)
+ * this function is not needed, as the automaton_execute_transition_request() handles it
+ */
 mbed_error_t automaton_set_state(const automaton_ctx_handler_t ctxh,
                                  const state_id_t new_state);
 
+/*
+ * get back the next state for the given (state/transition) pair.
+ * If the automaton is predictable (the pair always target a well known target state),
+ * the new state is written to newstate and the function returns MBED_ERROR_NONE.
+ * If not, the functions returns MBED_ERROR_UNKNOWN.
+ */
 mbed_error_t automaton_get_next_state(__in  const automaton_ctx_handler_t     ctxh,
                                       __in  const state_id_t                  current_state,
                                       __in  const transition_id_t             transition,
                                       __out state_id_t                       *newstate);
 
+/*
+ * Check if the pair (state/transition) is valid regarding the automaton identified by its
+ * handler. The functions returns SECURE_TRUE or SECURE_FALSE, depending on the result.
+ */
 secure_bool_t automaton_is_valid_transition(__in  const automaton_ctx_handler_t     ctxh,
                                             __in  const state_id_t                  current_state,
                                             __in  const transition_id_t             transition);
@@ -96,6 +132,37 @@ secure_bool_t automaton_is_valid_transition(__in  const automaton_ctx_handler_t 
 /****************************************************************
  * CFI specific automaton API
  ***************************************************************/
+
+/*
+ * CFI API is an implementation of a control flow integrity mechanism against fault
+ * injection and software overflow/corruption. The application can use them in replacement
+ * of the previously defined set_state/get_next_state/is_valid_transition.
+ *
+ * Instead the application can handle a code like this:
+ *
+ * mbed_error_t exec_trans1(automaton_ctx_handler_t ctxh)
+ * {
+ *     automaton_execute_transition_request(ctxh);
+ *     ... // transition specific code
+ * }
+ *
+ * mbed_error_t execute_automaton(automaton_ctx_hander_t ctxh, transition_id_t trans)
+ * {
+ *   automaton_push_transition_request(ctxh, trans);
+ *   switch (trans) {
+ *      case TRANS1:
+ *          exec_trans1(ctxh);
+ *          break;
+ *      case TRANS2:
+ *          ...
+ *   }
+ *   automaton_postcheck_transition_request(ctxh);
+ * }
+ *
+ * This avoid any fault injection on the switch/case code and force multiple verification
+ * on the transition, its memory integrity and its validity, making fault injection really
+ * harder.
+ */
 
 /*
  * push a transition request to the state automaton, by indicating the transition
