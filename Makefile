@@ -98,7 +98,7 @@ TIMEOUT:=15
 # See https://bts.frama-c.com/view.php?id=2206
 
 frama-c:
-	frama-c-gui automaton*.c -machdep x86_32 \
+	frama-c automaton*.c -machdep x86_32 \
 	            -warn-left-shift-negative \
 	            -warn-right-shift-negative \
 	            -warn-signed-downcast \
@@ -107,11 +107,31 @@ frama-c:
 	            -warn-unsigned-overflow \
 				-kernel-msg-key pp \
 				-no-frama-c-stdlib \
-				-cpp-extra-args="-nostdinc -I../std/api -I../firmware/api -I../../include/generated -I../../drivers/socs/stm32f439/flash/api" \
+				-cpp-extra-args="-nostdinc -I../std/api -I../../include/generated" \
 		    -rte \
 		    -eva \
 		    -wp-dynamic \
 		    -eva-slevel 1 \
+            -slevel-function="automaton_ctx_exists:100, \
+                automaton_state_exists:100, \
+                automaton_transition_exists:100, \
+                automaton_convert_state:100, \
+                automaton_convert_transition:100, \
+                automaton_convert_secure_state:200, \
+                automaton_convert_secure_transition:200, \
+                automaton_initialize:200, \
+                automaton_declare_context:400, \
+                automaton_get_state:100, \
+                automaton_set_state:200, \
+                automaton_get_next_state:300, \
+                automaton_is_valid_transition:300, \
+                automaton_push_transition_request:400, \
+                automaton_execute_transition_request:400, \
+                automaton_postcheck_transition_request:400, \
+                automaton_check_context_integrity:200, \
+                automaton_calculate_context_integrity:100, \
+                automaton_check_request_integrity:200, \
+                automaton_calculate_request_integrity:100" \
 		    -eva-warn-undefined-pointer-comparison none \
 		    -then \
 		    -wp \
@@ -119,7 +139,8 @@ frama-c:
 		    -wp-par $(JOBS) \
 		    -wp-steps 100000 -wp-depth 100000 -pp-annot \
 		    -wp-split -wp-literals \
-			-wp-timeout $(TIMEOUT) -save $(SESSION)
+			-wp-timeout $(TIMEOUT) -save $(SESSION) \
+	        -then -report
 
 frama-c-gui:
 	frama-c-gui -load $(SESSION)

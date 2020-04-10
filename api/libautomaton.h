@@ -117,6 +117,7 @@ mbed_error_t automaton_declare_context(__in  const uint8_t num_states,
 state_id_t automaton_get_state(__in  const automaton_ctx_handler_t ctxh,
                                __out state_id_t                   *state);
 
+#ifndef CONFIG_USR_LIB_AUTOMATON_CONTROL_FLOW_INTEGRITY
 /*
  * Set a new state for the automaton. Executed by transition request functions.
  * This function is made only if CFI is *disabled*. When using CFI (see below)
@@ -124,6 +125,7 @@ state_id_t automaton_get_state(__in  const automaton_ctx_handler_t ctxh,
  */
 mbed_error_t automaton_set_state(const automaton_ctx_handler_t ctxh,
                                  const state_id_t new_state);
+#endif
 
 /*
  * get back the next state for the given (state/transition) pair.

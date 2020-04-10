@@ -32,11 +32,6 @@
 #include "automaton_data_integrity.h"
 #include "automaton.h"
 
-#if CONFIG_USR_LIB_AUTOMATON_CONTROL_FLOW_INTEGRITY
-#include "libfw.h"
-#endif
-
-
 /*
  * We consider that states (state_id_t) are defined from 0 to n-1, n being the
  * number of states defined.
@@ -132,12 +127,27 @@ secure_bool_t automaton_ctx_exists(const automaton_ctx_handler_t ctxh)
 }
 
 /*@
-  @ requires 0 <= ctxh < CONFIG_USR_LIB_AUTOMATON_MAX_CONTEXT_NUM;
-  @ ensures \valid(\result);
   @ assigns \nothing;
+  @
+  @ behavior bad_entries:
+  @    assumes (ctxh >= ctx_vector.ctx_num || ctx_vector.initialized != SECURE_TRUE);
+  @    ensures \result == NULL;
+  @
+  @ behavior good_entries:
+  @    assumes (0 <= ctxh < ctx_vector.ctx_num && ctx_vector.initialized == SECURE_TRUE);
+  @    ensures \valid(\result);
+  @
+  @ complete behaviors;
+  @ disjoint behaviors;
   @*/
 automaton_context_t *automaton_get_context(const automaton_ctx_handler_t ctxh)
 {
+    if (ctx_vector.initialized != SECURE_TRUE) {
+        return NULL;
+    }
+    if (ctxh >= ctx_vector.ctx_num) {
+        return NULL;
+    }
     /* here we consider ctxh valid, as this function is called internally in the
      * automaton libs, where ctxh is check *before* this call */
     return (automaton_context_t *)&(ctx_vector.contexts[ctxh]);
@@ -281,7 +291,7 @@ mbed_error_t automaton_initialize(void)
     return MBED_ERROR_NONE;
 }
 
-
+/* TODO: crc check not added to good_entries behavior */
 /*@
   @ ensures state_automaton == NULL
   @   ==> \result == MBED_ERROR_INVPARAM;
@@ -307,6 +317,7 @@ mbed_error_t automaton_initialize(void)
   @                num_transition > MAX_AUTOMATON_TRANSITIONS);
   @       assigns ctx_vector.ctx_num;
   @
+  @ disjoint behaviors;
   @*/
 mbed_error_t automaton_declare_context(__in  const uint8_t num_states,
                                        __in  const uint8_t num_transition,
@@ -339,7 +350,10 @@ mbed_error_t automaton_declare_context(__in  const uint8_t num_states,
         goto err;
     }
     automaton_context_t *ctx = NULL;
-    ctx = automaton_get_context(ctx_vector.ctx_num);
+    if ((ctx = automaton_get_context(ctx_vector.ctx_num)) == NULL) {
+        errcode = MBED_ERROR_INVSTATE;
+        goto err;
+    }
 
     mutex_lock(&ctx_vector.lock);
 
@@ -393,6 +407,9 @@ err:
   @            ctx_vector.initialized == SECURE_TRUE;
   @     assigns *state;
   @     ensures \result == MBED_ERROR_NONE;
+  @
+  @ complete behaviors;
+  @ disjoint behaviors;
   @*/
 state_id_t automaton_get_state(__in  const automaton_ctx_handler_t ctxh,
                                __out state_id_t                   *state)
@@ -411,8 +428,10 @@ state_id_t automaton_get_state(__in  const automaton_ctx_handler_t ctxh,
         errcode = MBED_ERROR_INVPARAM;
         goto err;
     }
-
-    ctx = automaton_get_context(ctxh);
+    if ((ctx = automaton_get_context(ctxh)) == NULL) {
+        errcode = MBED_ERROR_INVSTATE;
+        goto err;
+    }
     *state = automaton_convert_state(ctx->state);
     errcode = MBED_ERROR_NONE;
 err:
@@ -445,7 +464,10 @@ mbed_error_t automaton_set_state(const automaton_ctx_handler_t ctxh,
         errcode = MBED_ERROR_INVPARAM;
         goto err;
     }
-    ctx = automaton_get_context(ctxh);
+    if ((ctx = automaton_get_context(ctxh)) == NULL) {
+        errcode = MBED_ERROR_INVSTATE;
+        goto err;
+    }
 
     if (automaton_state_exists(ctx, new_state) == SECURE_FALSE &&
         !(automaton_state_exists(ctx, new_state) != SECURE_FALSE)) {
@@ -515,7 +537,10 @@ mbed_error_t automaton_get_next_state(__in  const automaton_ctx_handler_t     ct
         errcode = MBED_ERROR_INVPARAM;
         goto err;
     }
-    ctx = automaton_get_context(ctxh);
+    if ((ctx = automaton_get_context(ctxh)) == NULL) {
+        errcode = MBED_ERROR_INVSTATE;
+        goto err;
+    }
 
     if (automaton_state_exists(ctx, current_state) == SECURE_FALSE &&
         !(automaton_state_exists(ctx, current_state) != SECURE_FALSE)) {
@@ -601,7 +626,9 @@ secure_bool_t automaton_is_valid_transition(__in  const automaton_ctx_handler_t 
     if (automaton_ctx_exists(ctxh) != SECURE_TRUE) {
         goto err;
     }
-    ctx = automaton_get_context(ctxh);
+    if ((ctx = automaton_get_context(ctxh)) == NULL) {
+        goto err;
+    }
     /* from now on, if must be doubled to avoid potential fault which may generate dangerous invalid
      * behavior */
     if (automaton_state_exists(ctx, current_state) == SECURE_FALSE &&
@@ -732,4 +759,4 @@ int main(void)
     }
     automaton_postcheck_transition_request(ctxh);
 }
-#endif
+#endif/*!__FRAMAC__*/

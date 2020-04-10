@@ -86,6 +86,18 @@ typedef struct {
     automaton_context_t contexts[CONFIG_USR_LIB_AUTOMATON_MAX_CONTEXT_NUM];
 } automaton_ctx_vector_t;
 
+
+#ifdef CONFIG_USR_LIB_AUTOMATON_CONTROL_FLOW_INTEGRITY
+/*
+ * This function is made privative in case of CFI use, setters is limited to CFI functions
+ * only
+ */
+mbed_error_t automaton_set_state(const automaton_ctx_handler_t ctxh,
+                                 const state_id_t new_state);
+#endif
+
+
+
 /* automaton locally exported API (internal to libautomaton */
 
 secure_bool_t automaton_ctx_exists(const automaton_ctx_handler_t ctxh);
