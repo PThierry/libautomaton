@@ -135,12 +135,16 @@ frama-c:
 		    -eva-warn-undefined-pointer-comparison none \
 		    -then \
 		    -wp \
-		    -wp-dynamic \
+		    -wp-no-dynamic \
 		    -wp-par $(JOBS) \
+			-wp-simpl \
+			-wp-let \
 		    -wp-steps 100000 -wp-depth 100000 -pp-annot \
 		    -wp-split -wp-literals \
 			-wp-timeout $(TIMEOUT) -save $(SESSION) \
 	        -then -report
+
+#	    	-wp-prover alt-ergo,cvc4,z3 \
 
 frama-c-gui:
 	frama-c-gui -load $(SESSION)

@@ -234,18 +234,21 @@ secure_transition_id_t automaton_convert_transition(transition_id_t transition)
   @*/
 state_id_t automaton_convert_secure_state(secure_state_id_t state)
 {
+    uint8_t i = 0;
+    state_id_t result = MAX_AUTOMATON_STATES;
     /*@ loop invariant 0 <= i < MAX_AUTOMATON_STATES;
       @ loop invariant \forall integer j; 0 <= j < i ==> state_translate_tab[i] != state;
       @ loop assigns i;
       @ loop variant MAX_AUTOMATON_STATES - i;
       @*/
-    for (uint8_t i = 0; i < MAX_AUTOMATON_STATES; ++i) {
+    for (i = 0; i < MAX_AUTOMATON_STATES; ++i) {
         if (state_translate_tab[i] == state) {
-            return i;
+            result = i;
+            break;
         }
     }
     /* use mbed_error_t instead */
-    return 0;
+    return result;
 }
 
 /*@
@@ -258,18 +261,22 @@ state_id_t automaton_convert_secure_state(secure_state_id_t state)
   @*/
 transition_id_t automaton_convert_secure_transition(secure_transition_id_t transition)
 {
+    uint8_t i = 0;
+    transition_id_t result = MAX_AUTOMATON_TRANSITIONS;
     /*@ loop invariant 0 <= i < MAX_AUTOMATON_TRANSITIONS;
       @ loop invariant \forall integer j; 0 <= j < i ==> transition_translate_tab[i] != transition;
       @ loop assigns i;
       @ loop variant MAX_AUTOMATON_TRANSITIONS - i;
       @*/
-    for (uint8_t i = 0; i < MAX_AUTOMATON_TRANSITIONS; ++i) {
+    for (i = 0; i < MAX_AUTOMATON_TRANSITIONS; ++i) {
         if (transition_translate_tab[i] == transition) {
-            return i;
+
+            result = i;
+            break;
         }
     }
     /* invalid here, 0 is a valid cell. use mbed_error_t instead */
-    return MAX_AUTOMATON_TRANSITIONS;
+    return result;
 }
 
 
@@ -529,6 +536,7 @@ mbed_error_t automaton_get_next_state(__in  const automaton_ctx_handler_t     ct
 {
     mbed_error_t errcode = MBED_ERROR_NONE;
     automaton_context_t *ctx = NULL;
+    uint8_t i = 0;
     /* sanitize */
     if (ctx_vector.initialized != SECURE_TRUE) {
         return MBED_ERROR_INVSTATE;
@@ -560,7 +568,7 @@ mbed_error_t automaton_get_next_state(__in  const automaton_ctx_handler_t     ct
       @ loop assigns *newstate;
       @ loop variant CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE - i;
       @*/
-    for (uint8_t i = 0; i < CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE; ++i) {
+    for (i = 0; i < CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE; ++i) {
 
         /* no more valid transition for this state, this transition does not exist for
          * this state. */
@@ -617,6 +625,7 @@ secure_bool_t automaton_is_valid_transition(__in  const automaton_ctx_handler_t 
 {
     secure_bool_t result = SECURE_FALSE;
     automaton_context_t *ctx = NULL;
+    uint8_t i = 0;
     /* sanitize */
     /* the first initialization steps are not hardened as a fault on these if will simply generated
      * a memory fault */
@@ -647,7 +656,7 @@ secure_bool_t automaton_is_valid_transition(__in  const automaton_ctx_handler_t 
       @ loop assigns result;
       @ loop variant CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE - i;
       @*/
-    for (uint8_t i = 0; i < CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE; ++i) {
+    for (i = 0; i < CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE; ++i) {
 
         /* no more valid transition for this state, just leave */
         if (ctx->state_automaton[current_state]->transition[i].valid == false) {
