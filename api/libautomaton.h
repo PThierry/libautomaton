@@ -34,6 +34,22 @@
  ***************************************************************/
 
 /*
+ * Due to secure automaton properties, only 16 states are supported.
+ * This sould be enough for most of existing state automaton.
+ * If more state are requested, the state_translation_tab[] must be increased.
+ */
+#define MAX_AUTOMATON_STATES 16
+
+/*
+ * Due to secure automaton properties, only 32 transitions are supported.
+ * This sould be enough for most of existing state automaton.
+ * If more transitions are requested, the transition_translation_tab[] must be increased.
+ */
+#define MAX_AUTOMATON_TRANSITIONS 32
+
+
+
+/*
  * secure boolean, not exactly inverted, with a Hamming distance long enough
  */
 typedef enum {
@@ -53,6 +69,7 @@ typedef struct {
     transition_id_t transition_id;   /*< transition identifier */
     state_id_t      target_state;    /*< target state (when predictable) */
     bool            predictable;      /*< is transition predictable (depends only on current state) */
+    bool            valid;      /*< is this transaction field exists or is it an empty cell ? */
 } transition_spec_t;
 
 
@@ -91,7 +108,6 @@ mbed_error_t automaton_initialize(void);
  */
 mbed_error_t automaton_declare_context(__in  const uint8_t num_states,
                                        __in  const uint8_t num_transition,
-                                       __in  const uint8_t max_transition_per_state,
                                        __in  const automaton_transition_t *const * const state_automaton,
                                        __out automaton_ctx_handler_t *ctxh);
 

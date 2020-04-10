@@ -22,7 +22,6 @@ secure_bool_t automaton_check_context_integrity(__in const automaton_context_t *
     uint32_t crc_ctx = 0xffffffff;
     crc_ctx = crc32((unsigned char*)&ctx->state_number, sizeof(uint8_t), crc_ctx);
     crc_ctx = crc32((unsigned char*)&ctx->transition_number, sizeof(uint8_t), crc_ctx);
-    crc_ctx = crc32((unsigned char*)&ctx->max_transitions_per_state, sizeof(uint8_t), crc_ctx);
     crc_ctx = crc32((unsigned char*)&ctx->state_automaton, sizeof(void*), crc_ctx);
     /*hardened if */
     if (ctx->crc != crc_ctx &&
@@ -59,7 +58,6 @@ mbed_error_t automaton_calculate_context_integrity(__in  const automaton_context
     uint32_t crc_ctx = 0xffffffff;
     crc_ctx = crc32((unsigned char*)&ctx->state_number, sizeof(uint8_t), crc_ctx);
     crc_ctx = crc32((unsigned char*)&ctx->transition_number, sizeof(uint8_t), crc_ctx);
-    crc_ctx = crc32((unsigned char*)&ctx->max_transitions_per_state, sizeof(uint8_t), crc_ctx);
     crc_ctx = crc32((unsigned char*)&ctx->state_automaton, sizeof(void*), crc_ctx);
 
     *crc = crc_ctx;

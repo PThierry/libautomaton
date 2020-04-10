@@ -30,20 +30,6 @@
 #include "libc/stdio.h"
 #include "autoconf.h"
 
-/*
- * Due to secure automaton properties, only 16 states are supported.
- * This sould be enough for most of existing state automaton.
- * If more state are requested, the state_translation_tab[] must be increased.
- */
-#define MAX_AUTOMATON_STATES 16
-
-/*
- * Due to secure automaton properties, only 32 transitions are supported.
- * This sould be enough for most of existing state automaton.
- * If more transitions are requested, the transition_translation_tab[] must be increased.
- */
-#define MAX_AUTOMATON_TRANSITIONS 32
-
 #define AUTOMATON_DEBUG CONFIG_USR_LIB_AUTOMATON_DEBUG
 
 #if AUTOMATON_DEBUG
@@ -81,7 +67,6 @@ typedef struct {
     uint8_t             state_number;               /*< number of state for automaton */
     uint8_t             transition_number;          /*< number of transition for automaton */
     volatile secure_state_id_t state;                      /*< current state */
-    uint8_t             max_transitions_per_state;  /*< max number of transition per state */
     const automaton_transition_t * const * state_automaton; /*< declared state automaton */
     volatile uint32_t   state_lock;                /*< state WR access lock */
 

@@ -132,10 +132,10 @@ secure_bool_t automaton_ctx_exists(const automaton_ctx_handler_t ctxh)
 }
 
 /*@
-    requires 0 <= ctxh < CONFIG_USR_LIB_AUTOMATON_MAX_CONTEXT_NUM;
-    ensures \valid(\result);
-    assigns \nothing;
- */
+  @ requires 0 <= ctxh < CONFIG_USR_LIB_AUTOMATON_MAX_CONTEXT_NUM;
+  @ ensures \valid(\result);
+  @ assigns \nothing;
+  @*/
 automaton_context_t *automaton_get_context(const automaton_ctx_handler_t ctxh)
 {
     /* here we consider ctxh valid, as this function is called internally in the
@@ -147,12 +147,12 @@ automaton_context_t *automaton_get_context(const automaton_ctx_handler_t ctxh)
 /* About a given context automaton handling */
 
 /*@
-     requires \valid(ctx);
-     requires state >= 0;
-     ensures ctx->state_number < state ==> \result == SECURE_FALSE;
-     ensures 0 <= state < ctx->state_number ==> \result == SECURE_FALSE;
-     assigns \nothing;
-*/
+  @  requires \valid(ctx);
+  @  requires state >= 0;
+  @  ensures ctx->state_number < state ==> \result == SECURE_FALSE;
+  @  ensures 0 <= state < ctx->state_number ==> \result == SECURE_FALSE;
+  @  assigns \nothing;
+  @*/
 secure_bool_t automaton_state_exists(const automaton_context_t * const ctx, const state_id_t state)
 {
     secure_bool_t res = SECURE_FALSE;
@@ -168,11 +168,11 @@ err:
 }
 
 /*@
-     requires \valid(ctx);
-     requires transition >= 0;
-     ensures ctx->transition_number < transition ==> \result == SECURE_FALSE;
-     ensures 0 <= transition < ctx->transition_number ==> \result == SECURE_FALSE;
-*/
+  @  requires \valid(ctx);
+  @  requires transition >= 0;
+  @  ensures ctx->transition_number < transition ==> \result == SECURE_FALSE;
+  @  ensures 0 <= transition < ctx->transition_number ==> \result == SECURE_FALSE;
+  @*/
 secure_bool_t automaton_transition_exists(const automaton_context_t * const ctx, const transition_id_t transition)
 {
     secure_bool_t res = SECURE_FALSE;
@@ -188,11 +188,11 @@ err:
 }
 
 /*@
-     ensures 0 <= state < MAX_AUTOMATON_STATES
-         ==> \result == state_translate_tab[state];
-     ensures state >= MAX_AUTOMATON_STATES
-         ==> \result == 0;
-*/
+  @  ensures 0 <= state < MAX_AUTOMATON_STATES
+  @      ==> \result == state_translate_tab[state];
+  @  ensures state >= MAX_AUTOMATON_STATES
+  @      ==> \result == 0;
+  @*/
 secure_state_id_t automaton_convert_state(state_id_t state)
 {
     if (state < MAX_AUTOMATON_STATES) {
@@ -202,11 +202,11 @@ secure_state_id_t automaton_convert_state(state_id_t state)
 }
 
 /*@
-     ensures 0 <= transition < MAX_AUTOMATON_TRANSITIONS
-         ==> \result == transition_translate_tab[transition];
-     ensures transition >= MAX_AUTOMATON_TRANSITIONS
-         ==> \result == 0;
-*/
+  @  ensures 0 <= transition < MAX_AUTOMATON_TRANSITIONS
+  @      ==> \result == transition_translate_tab[transition];
+  @  ensures transition >= MAX_AUTOMATON_TRANSITIONS
+  @      ==> \result == 0;
+  @*/
 secure_transition_id_t automaton_convert_transition(transition_id_t transition)
 {
     if (transition < MAX_AUTOMATON_TRANSITIONS) {
@@ -216,19 +216,19 @@ secure_transition_id_t automaton_convert_transition(transition_id_t transition)
 }
 
 /*@
-     ensures 0 <= state < MAX_AUTOMATON_STATES;
-     assigns \nothing;
-     ensures \result == MAX_AUTOMATON_STATES
-        ==> (\forall integer i; 0 <= i < MAX_AUTOMATON_STATES ==> state_translate_tab[i] != state);
-     ensures 0 <= \result < MAX_AUTOMATON_STATES ==> state_translate_tab[\result] == state;
-*/
+  @  ensures 0 <= state < MAX_AUTOMATON_STATES;
+  @  assigns \nothing;
+  @  ensures \result == MAX_AUTOMATON_STATES
+  @     ==> (\forall integer i; 0 <= i < MAX_AUTOMATON_STATES ==> state_translate_tab[i] != state);
+  @  ensures 0 <= \result < MAX_AUTOMATON_STATES ==> state_translate_tab[\result] == state;
+  @*/
 state_id_t automaton_convert_secure_state(secure_state_id_t state)
 {
     /*@ loop invariant 0 <= i < MAX_AUTOMATON_STATES;
-        loop invariant \forall integer j; 0 <= j < i ==> state_translate_tab[i] != state;
-        loop assigns i;
-        loop variant MAX_AUTOMATON_STATES - i;
-     */
+      @ loop invariant \forall integer j; 0 <= j < i ==> state_translate_tab[i] != state;
+      @ loop assigns i;
+      @ loop variant MAX_AUTOMATON_STATES - i;
+      @*/
     for (uint8_t i = 0; i < MAX_AUTOMATON_STATES; ++i) {
         if (state_translate_tab[i] == state) {
             return i;
@@ -239,20 +239,20 @@ state_id_t automaton_convert_secure_state(secure_state_id_t state)
 }
 
 /*@
-     ensures 0 <= transition < MAX_AUTOMATON_TRANSITIONS;
-     assigns \nothing;
-     ensures \result == MAX_AUTOMATON_TRANSITIONS
-        ==> (\forall integer i; 0 <= i < MAX_AUTOMATON_TRANSITIONS ==> transition_translate_tab[i] != transition);
-     ensures 0 <= \result < MAX_AUTOMATON_TRANSITIONS
-        ==> transition_translate_tab[\result] == transition;
-*/
+  @  ensures 0 <= transition < MAX_AUTOMATON_TRANSITIONS;
+  @  assigns \nothing;
+  @  ensures \result == MAX_AUTOMATON_TRANSITIONS
+  @     ==> (\forall integer i; 0 <= i < MAX_AUTOMATON_TRANSITIONS ==> transition_translate_tab[i] != transition);
+  @  ensures 0 <= \result < MAX_AUTOMATON_TRANSITIONS
+  @     ==> transition_translate_tab[\result] == transition;
+  @*/
 transition_id_t automaton_convert_secure_transition(secure_transition_id_t transition)
 {
     /*@ loop invariant 0 <= i < MAX_AUTOMATON_TRANSITIONS;
-        loop invariant \forall integer j; 0 <= j < i ==> transition_translate_tab[i] != transition;
-        loop assigns i;
-        loop variant MAX_AUTOMATON_TRANSITIONS - i;
-     */
+      @ loop invariant \forall integer j; 0 <= j < i ==> transition_translate_tab[i] != transition;
+      @ loop assigns i;
+      @ loop variant MAX_AUTOMATON_TRANSITIONS - i;
+      @*/
     for (uint8_t i = 0; i < MAX_AUTOMATON_TRANSITIONS; ++i) {
         if (transition_translate_tab[i] == transition) {
             return i;
@@ -283,34 +283,33 @@ mbed_error_t automaton_initialize(void)
 
 
 /*@
-    ensures state_automaton == NULL
-      ==> \result == MBED_ERROR_INVPARAM;
-    ensures ctx_vector.initialized != SECURE_TRUE
-      ==> \result == MBED_ERROR_INVSTATE;
-    ensures num_states > MAX_AUTOMATON_STATES
-      ==> \result == MBED_ERROR_NOMEM;
-    ensures num_transition > MAX_AUTOMATON_TRANSITIONS
-      ==> \result == MBED_ERROR_NOMEM;
-
-    behavior bad_entries:
-        assumes (state_automaton == NULL ||
-                 num_states > MAX_AUTOMATON_STATES ||
-                 ctx_vector.initialized != SECURE_TRUE ||
-                 num_states > MAX_AUTOMATON_STATES ||
-                 num_transition > MAX_AUTOMATON_TRANSITIONS);
-        assigns \nothing;
-    behavior good_entries:
-        assumes !(state_automaton == NULL ||
-                   num_states > MAX_AUTOMATON_STATES ||
-                   ctx_vector.initialized != SECURE_TRUE ||
-                   num_states > MAX_AUTOMATON_STATES ||
-                   num_transition > MAX_AUTOMATON_TRANSITIONS);
-          assigns ctx_vector.ctx_num;
-
- */
+  @ ensures state_automaton == NULL
+  @   ==> \result == MBED_ERROR_INVPARAM;
+  @ ensures ctx_vector.initialized != SECURE_TRUE
+  @   ==> \result == MBED_ERROR_INVSTATE;
+  @ ensures num_states > MAX_AUTOMATON_STATES
+  @   ==> \result == MBED_ERROR_NOMEM;
+  @ ensures num_transition > MAX_AUTOMATON_TRANSITIONS
+  @   ==> \result == MBED_ERROR_NOMEM;
+  @
+  @ behavior bad_entries:
+  @     assumes (state_automaton == NULL ||
+  @              num_states > MAX_AUTOMATON_STATES ||
+  @              ctx_vector.initialized != SECURE_TRUE ||
+  @              num_states > MAX_AUTOMATON_STATES ||
+  @              num_transition > MAX_AUTOMATON_TRANSITIONS);
+  @     assigns \nothing;
+  @ behavior good_entries:
+  @     assumes !(state_automaton == NULL ||
+  @                num_states > MAX_AUTOMATON_STATES ||
+  @                ctx_vector.initialized != SECURE_TRUE ||
+  @                num_states > MAX_AUTOMATON_STATES ||
+  @                num_transition > MAX_AUTOMATON_TRANSITIONS);
+  @       assigns ctx_vector.ctx_num;
+  @
+  @*/
 mbed_error_t automaton_declare_context(__in  const uint8_t num_states,
                                        __in  const uint8_t num_transition,
-                                       __in  const uint8_t max_transition_per_state,
                                        __in  const automaton_transition_t * const * const state_automaton,
                                        __out automaton_ctx_handler_t *ctxh)
 {
@@ -347,7 +346,6 @@ mbed_error_t automaton_declare_context(__in  const uint8_t num_states,
     mutex_init(&ctx->state_lock);
     ctx->state_number = num_states;
     ctx->transition_number = num_transition;
-    ctx->max_transitions_per_state = max_transition_per_state;
     ctx->state_automaton = state_automaton;
 
     mutex_unlock(&ctx_vector.lock);
@@ -375,27 +373,27 @@ err:
 
 
 /*@
-    ensures ctxh >=ctx_vector.ctx_num
-      ==> \result == MBED_ERROR_INVPARAM;
-    ensures !(\valid(state))
-      ==> \result == MBED_ERROR_INVPARAM;
-    ensures ctx_vector.initialized != SECURE_TRUE
-      ==> \result == MBED_ERROR_INVSTATE;
-
-    behavior bad_entries:
-      assumes ctxh >= ctx_vector.ctx_num ||
-               !(\valid(state)) ||
-               ctx_vector.initialized != SECURE_TRUE;
-        assigns \nothing;
-        ensures \result != MBED_ERROR_NONE;
-
-    behavior good_entries:
-        assumes ctxh < ctx_vector.ctx_num &&
-               \valid(state) &&
-               ctx_vector.initialized == SECURE_TRUE;
-        assigns *state;
-        ensures \result == MBED_ERROR_NONE;
- */
+  @ ensures ctxh >=ctx_vector.ctx_num
+  @   ==> \result == MBED_ERROR_INVPARAM;
+  @ ensures !(\valid(state))
+  @   ==> \result == MBED_ERROR_INVPARAM;
+  @ ensures ctx_vector.initialized != SECURE_TRUE
+  @   ==> \result == MBED_ERROR_INVSTATE;
+  @
+  @ behavior bad_entries:
+  @   assumes ctxh >= ctx_vector.ctx_num ||
+  @            !(\valid(state)) ||
+  @            ctx_vector.initialized != SECURE_TRUE;
+  @     assigns \nothing;
+  @     ensures \result != MBED_ERROR_NONE;
+  @
+  @ behavior good_entries:
+  @     assumes ctxh < ctx_vector.ctx_num &&
+  @            \valid(state) &&
+  @            ctx_vector.initialized == SECURE_TRUE;
+  @     assigns *state;
+  @     ensures \result == MBED_ERROR_NONE;
+  @*/
 state_id_t automaton_get_state(__in  const automaton_ctx_handler_t ctxh,
                                __out state_id_t                   *state)
 {
@@ -422,18 +420,18 @@ err:
 }
 
 /*@
-    ensures ctxh >=ctx_vector.ctx_num
-      ==> \result == MBED_ERROR_INVPARAM;
-    ensures ctx_vector.initialized != SECURE_TRUE
-      ==> \result == MBED_ERROR_INVSTATE;
-
-    behavior bad_entries:
-      assumes ctxh >= ctx_vector.ctx_num ||
-               ctx_vector.initialized != SECURE_TRUE;
-        assigns \nothing;
-        ensures \result != MBED_ERROR_NONE;
-
- */
+  @ ensures ctxh >=ctx_vector.ctx_num
+  @   ==> \result == MBED_ERROR_INVPARAM;
+  @ ensures ctx_vector.initialized != SECURE_TRUE
+  @   ==> \result == MBED_ERROR_INVSTATE;
+  @
+  @ behavior bad_entries:
+  @   assumes ctxh >= ctx_vector.ctx_num ||
+  @            ctx_vector.initialized != SECURE_TRUE;
+  @     assigns \nothing;
+  @     ensures \result != MBED_ERROR_NONE;
+  @
+  @*/
 mbed_error_t automaton_set_state(const automaton_ctx_handler_t ctxh,
                                  const state_id_t new_state)
 {
@@ -490,18 +488,18 @@ err:
  */
 
 /*@
-    ensures ctxh >=ctx_vector.ctx_num
-      ==> \result == MBED_ERROR_INVPARAM;
-    ensures ctx_vector.initialized != SECURE_TRUE
-      ==> \result == MBED_ERROR_INVSTATE;
-
-    behavior bad_entries:
-      assumes ctxh >= ctx_vector.ctx_num ||
-               ctx_vector.initialized != SECURE_TRUE;
-        assigns \nothing;
-        ensures \result != MBED_ERROR_NONE;
-
- */
+  @ ensures ctxh >=ctx_vector.ctx_num
+  @   ==> \result == MBED_ERROR_INVPARAM;
+  @ ensures ctx_vector.initialized != SECURE_TRUE
+  @   ==> \result == MBED_ERROR_INVSTATE;
+  @
+  @ behavior bad_entries:
+  @   assumes ctxh >= ctx_vector.ctx_num ||
+  @            ctx_vector.initialized != SECURE_TRUE;
+  @     assigns \nothing;
+  @     ensures \result != MBED_ERROR_NONE;
+  @
+  @*/
 mbed_error_t automaton_get_next_state(__in  const automaton_ctx_handler_t     ctxh,
                                       __in  const state_id_t                  current_state,
                                       __in  const transition_id_t             transition,
@@ -530,13 +528,21 @@ mbed_error_t automaton_get_next_state(__in  const automaton_ctx_handler_t     ct
 
     /* TODO: howto define the special case of unpredictable target state ? */
 
-    /*@ loop invariant 0 <= i < ctx->max_transitions_per_state;
-        loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state]->transition[i].transition_id != transition;
-        loop assigns i;
-        loop assigns *newstate;
-        loop variant ctx->max_transitions_per_state - i;
-     */
-    for (uint8_t i = 0; i < ctx->max_transitions_per_state; ++i) {
+    /*@ loop invariant 0 <= i < CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE;
+      @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state]->transition[i].transition_id != transition;
+      @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state]->transition[i].valid == true;
+      @ loop assigns i;
+      @ loop assigns *newstate;
+      @ loop variant CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE - i;
+      @*/
+    for (uint8_t i = 0; i < CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE; ++i) {
+
+        /* no more valid transition for this state, this transition does not exist for
+         * this state. */
+        if (ctx->state_automaton[current_state]->transition[i].valid == false) {
+            errcode = MBED_ERROR_INVSTATE;
+            goto err;
+        }
         /* hardened if, requiring O0 */
         if (ctx->state_automaton[current_state]->transition[i].transition_id == transition &&
             !(ctx->state_automaton[current_state]->transition[i].transition_id != transition))
@@ -566,21 +572,20 @@ err:
  */
 
 /*@
-    ensures ctxh >=ctx_vector.ctx_num
-      ==> \result == SECURE_FALSE;
-    ensures ctx_vector.initialized != SECURE_TRUE
-      ==> \result == SECURE_FALSE;
-
-    behavior bad_entries:
-      assumes ctxh >= ctx_vector.ctx_num ||
-               ctx_vector.initialized != SECURE_TRUE;
-        assigns \nothing;
-        ensures \result == SECURE_FALSE;
-
-    ensures \result == SECURE_TRUE
-      ==> \exists integer i; 0 <= i < ctx_vector.contexts[ctxh].max_transitions_per_state && ctx_vector.contexts[ctxh].state_automaton[current_state]->transition[i].transition_id == transition;
-
- */
+  @ ensures ctxh >=ctx_vector.ctx_num
+  @   ==> \result == SECURE_FALSE;
+  @ ensures ctx_vector.initialized != SECURE_TRUE
+  @   ==> \result == SECURE_FALSE;
+  @
+  @ behavior bad_entries:
+  @   assumes ctxh >= ctx_vector.ctx_num ||
+  @            ctx_vector.initialized != SECURE_TRUE;
+  @     assigns \nothing;
+  @     ensures \result == SECURE_FALSE;
+  @
+  @ ensures \result == SECURE_TRUE
+  @   ==> \exists integer i; 0 <= i < CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE && ctx_vector.contexts[ctxh].state_automaton[current_state]->transition[i].transition_id == transition;
+  @*/
 secure_bool_t automaton_is_valid_transition(__in  const automaton_ctx_handler_t     ctxh,
                                             __in  const state_id_t                  current_state,
                                             __in  const transition_id_t             transition)
@@ -608,9 +613,19 @@ secure_bool_t automaton_is_valid_transition(__in  const automaton_ctx_handler_t 
         goto err;
     }
 
-    /* TODO: get next state on state automaton */
-    for (uint8_t i = 0; i < ctx->max_transitions_per_state; ++i) {
+    /*@ loop invariant 0 <= i < CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE;
+      @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state]->transition[i].transition_id != transition;
+      @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state]->transition[i].valid == true;
+      @ loop assigns i;
+      @ loop assigns result;
+      @ loop variant CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE - i;
+      @*/
+    for (uint8_t i = 0; i < CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE; ++i) {
 
+        /* no more valid transition for this state, just leave */
+        if (ctx->state_automaton[current_state]->transition[i].valid == false) {
+            goto err;
+        }
         /* hardened if, requiring O0 */
         if (ctx->state_automaton[current_state]->transition[i].transition_id == transition &&
             !(ctx->state_automaton[current_state]->transition[i].transition_id != transition)) {
@@ -635,7 +650,6 @@ int main(void)
     /* we fix input data that are .rodata, stored in flash */
     uint8_t num_states = 3;
     uint8_t num_transitions = 4;
-    uint8_t max_trans_per_state = CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE;
     automaton_ctx_handler_t ctxh = Frama_C_interval(0,255);
 
     const automaton_transition_t automaton[] = {
@@ -644,12 +658,14 @@ int main(void)
             {
               .transition_id = 0,
               .target_state  = 1,
-              .predictable   = true
+              .predictable   = true,
+              .valid         = true
             },
             {
               .transition_id = 1,
               .target_state  = 2,
-              .predictable   = true
+              .predictable   = true,
+              .valid         = true
             }
           }
         },
@@ -658,11 +674,13 @@ int main(void)
             {
               .transition_id = 2,
               .target_state  = 2,
-              .predictable   = true
+              .predictable   = true,
+              .valid         = true
             },
             { .transition_id = 0xff,
               .target_state  = 0xff,
-              .predictable   = false
+              .predictable   = false,
+              .valid         = false
             }
           }
         },
@@ -671,18 +689,20 @@ int main(void)
             {
               .transition_id = 3,
               .target_state  = 0,
-              .predictable   = true
+              .predictable   = true,
+              .valid         = true
             },
             { .transition_id = 0xff,
               .target_state  = 0xff,
-              .predictable   = false
+              .predictable   = false,
+              .valid         = false
             }
           }
         }
     };
 
     automaton_initialize();
-    automaton_declare_context(num_states, num_transitions, max_trans_per_state, (automaton_transition_t const *const*)&automaton, &ctxh);
+    automaton_declare_context(num_states, num_transitions, (automaton_transition_t const *const*)&automaton, &ctxh);
 
 
    /* now, everything can be corrupted */
