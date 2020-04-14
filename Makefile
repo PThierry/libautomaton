@@ -141,6 +141,7 @@ frama-c:
 			-wp-let \
 		    -wp-steps 100000 -wp-depth 100000 -pp-annot \
 		    -wp-split -wp-literals \
+			-wp-model "Typed+ref+int+float" \
 			-wp-timeout $(TIMEOUT) -save $(SESSION) \
 	        -then -report
 
