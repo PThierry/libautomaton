@@ -142,6 +142,7 @@ secure_bool_t automaton_ctx_exists(const automaton_ctx_handler_t ctxh)
   @*/
 automaton_context_t *automaton_get_context(const automaton_ctx_handler_t ctxh)
 {
+    automaton_context_t *ctx = 0;
     if (ctx_vector.initialized != SECURE_TRUE) {
         return NULL;
     }
@@ -150,7 +151,10 @@ automaton_context_t *automaton_get_context(const automaton_ctx_handler_t ctxh)
     }
     /* here we consider ctxh valid, as this function is called internally in the
      * automaton libs, where ctxh is check *before* this call */
-    return (automaton_context_t *)&(ctx_vector.contexts[ctxh]);
+
+    ctx = (automaton_context_t *)&(ctx_vector.contexts[ctxh]);
+    /*@ assert \valid(ctx); */
+    return ctx;
 }
 
 
@@ -236,7 +240,7 @@ state_id_t automaton_convert_secure_state(secure_state_id_t state)
 {
     uint8_t i = 0;
     state_id_t result = MAX_AUTOMATON_STATES;
-    /*@ loop invariant 0 <= i < MAX_AUTOMATON_STATES;
+    /*@ loop invariant 0 <= i <= MAX_AUTOMATON_STATES;
       @ loop invariant \forall integer j; 0 <= j < i ==> state_translate_tab[i] != state;
       @ loop assigns i;
       @ loop variant MAX_AUTOMATON_STATES - i;
@@ -263,7 +267,7 @@ transition_id_t automaton_convert_secure_transition(secure_transition_id_t trans
 {
     uint8_t i = 0;
     transition_id_t result = MAX_AUTOMATON_TRANSITIONS;
-    /*@ loop invariant 0 <= i < MAX_AUTOMATON_TRANSITIONS;
+    /*@ loop invariant 0 <= i <= MAX_AUTOMATON_TRANSITIONS;
       @ loop invariant \forall integer j; 0 <= j < i ==> transition_translate_tab[i] != transition;
       @ loop assigns i;
       @ loop variant MAX_AUTOMATON_TRANSITIONS - i;
@@ -561,7 +565,7 @@ mbed_error_t automaton_get_next_state(__in  const automaton_ctx_handler_t     ct
 
     /* TODO: howto define the special case of unpredictable target state ? */
 
-    /*@ loop invariant 0 <= i < CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE;
+    /*@ loop invariant 0 <= i <= CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE;
       @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state]->transition[i].transition_id != transition;
       @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state]->transition[i].valid == true;
       @ loop assigns i;
@@ -629,7 +633,7 @@ secure_bool_t automaton_is_valid_transition(__in  const automaton_ctx_handler_t 
     /* sanitize */
     /* the first initialization steps are not hardened as a fault on these if will simply generated
      * a memory fault */
-    if (ctx_vector.initialized != SECURE_FALSE) {
+    if (ctx_vector.initialized != SECURE_TRUE) {
         goto err;
     }
     if (automaton_ctx_exists(ctxh) != SECURE_TRUE) {
@@ -649,7 +653,7 @@ secure_bool_t automaton_is_valid_transition(__in  const automaton_ctx_handler_t 
         goto err;
     }
 
-    /*@ loop invariant 0 <= i < CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE;
+    /*@ loop invariant 0 <= i <= CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE;
       @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state]->transition[i].transition_id != transition;
       @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state]->transition[i].valid == true;
       @ loop assigns i;
@@ -744,6 +748,8 @@ int main(void)
    /* now, everything can be corrupted */
 
     uint8_t cur_trans = Frama_C_interval(0, 255);
+    /* imagine we generate any possible invalid values for ctxh */
+    ctxh = Frama_C_interval(0, 255);
 
     automaton_push_transition_request(ctxh, cur_trans);
     switch(cur_trans) {
