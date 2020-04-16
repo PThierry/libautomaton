@@ -144,16 +144,17 @@ automaton_context_t *automaton_get_context(const automaton_ctx_handler_t ctxh)
 {
     automaton_context_t *ctx = 0;
     if (ctx_vector.initialized != SECURE_TRUE) {
-        return NULL;
+        goto err;
     }
     if (ctxh >= ctx_vector.ctx_num) {
-        return NULL;
+        goto err;
     }
     /* here we consider ctxh valid, as this function is called internally in the
      * automaton libs, where ctxh is check *before* this call */
 
     ctx = (automaton_context_t *)&(ctx_vector.contexts[ctxh]);
     /*@ assert \valid(ctx); */
+err:
     return ctx;
 }
 
@@ -744,6 +745,8 @@ int main(void)
     automaton_initialize();
     automaton_declare_context(num_states, num_transitions, (automaton_transition_t const *const*)&automaton, &ctxh);
 
+    /* initial state */
+    automaton_set_state(ctxh, 0);
 
    /* now, everything can be corrupted */
 

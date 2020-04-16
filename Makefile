@@ -88,7 +88,7 @@ $(APP_BUILD_DIR):
 
 SESSION:=frama-c-rte-val-wp.session
 JOBS:=$(shell nproc)
-TIMEOUT:=15
+TIMEOUT:=30
 
 # "-val-warn-undefined-pointer-comparison none" is to deal with the
 # checks (\pointer_comparable( - ,  - )) otherwise added by EVA before
@@ -139,13 +139,12 @@ frama-c:
 		    -wp-par $(JOBS) \
 			-wp-simpl \
 			-wp-let \
-		    -wp-steps 100000 -wp-depth 100000 -pp-annot \
+		    -wp-steps 100000 -pp-annot \
 		    -wp-split -wp-literals \
 			-wp-model "Typed+ref+int+float" \
 			-wp-timeout $(TIMEOUT) -save $(SESSION) \
+	    	-wp-prover alt-ergo,cvc4,cvc4-ce,z3,z3-ce,z3-nobv \
 	        -then -report
-
-#	    	-wp-prover alt-ergo,cvc4,z3 \
 
 frama-c-gui:
 	frama-c-gui -load $(SESSION)
