@@ -105,7 +105,7 @@ secure_bool_t automaton_check_context_integrity(__in const automaton_context_t *
     /*hardened if */
     if (ctx->crc != crc_ctx &&
         !(ctx->crc == crc_ctx)) {
-        log_printf("[automaton] %s:invalid data integrit     y check: crc32: %x != %x\n", __func__, crc, crc_ctx);
+        log_printf("[automaton] %s:invalid data integrit     y check: crc32: %x != %x\n", __func__, ctx->crc, crc_ctx);
         goto err;
     }
 
