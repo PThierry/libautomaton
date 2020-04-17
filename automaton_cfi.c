@@ -17,6 +17,7 @@
 mbed_error_t automaton_push_transition_request(__in const automaton_ctx_handler_t ctxh,
                                                __in const transition_id_t req)
 {
+    log_printf("%s: => %d\n", __func__, req);
     /* errcode, default fail */
     mbed_error_t errcode = MBED_ERROR_INVPARAM;
     automaton_context_t *ctx = NULL;
@@ -63,6 +64,7 @@ err:
 
 mbed_error_t automaton_execute_transition_request(__in const automaton_ctx_handler_t ctxh)
 {
+    log_printf("%s\n", __func__);
     /* errcode, default fail */
     mbed_error_t errcode = MBED_ERROR_INVPARAM;
     automaton_context_t *ctx = NULL;
@@ -129,6 +131,7 @@ err:
 
 mbed_error_t automaton_postcheck_transition_request(__in const automaton_ctx_handler_t ctxh)
 {
+    log_printf("%s\n", __func__);
     /* errcode, default fail */
     mbed_error_t errcode = MBED_ERROR_INVPARAM;
     automaton_context_t *ctx = NULL;
@@ -160,7 +163,7 @@ mbed_error_t automaton_postcheck_transition_request(__in const automaton_ctx_han
      */
     secure_state_id_t current_state = ctx->state;
     if (next_state != current_state) {
-        log_printf("[automaton] %s:posthook: transition to different target state: %x\n", __func__, state);
+        log_printf("[automaton] %s:posthook: transition to different target state: %x\n", __func__, next_state);
         errcode = MBED_ERROR_INVSTATE;
         goto err;
     }

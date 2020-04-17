@@ -81,8 +81,8 @@ typedef struct {
 
 typedef struct {
     volatile uint32_t   lock;
-    uint8_t             ctx_num;
-    secure_bool_t       initialized;
+    volatile uint8_t        ctx_num;
+    volatile secure_bool_t       initialized;
     automaton_context_t contexts[CONFIG_USR_LIB_AUTOMATON_MAX_CONTEXT_NUM];
 } automaton_ctx_vector_t;
 

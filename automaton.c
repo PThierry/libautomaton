@@ -339,6 +339,7 @@ mbed_error_t automaton_declare_context(__in  const uint8_t num_states,
     mbed_error_t errcode = MBED_ERROR_NONE;
     /*sanitize */
     if (ctx_vector.initialized != SECURE_TRUE) {
+        log_printf("[automaton] you must initialize first!\n");
         return MBED_ERROR_INVSTATE;
     }
     if (!ctxh) {
@@ -362,10 +363,8 @@ mbed_error_t automaton_declare_context(__in  const uint8_t num_states,
         goto err;
     }
     automaton_context_t *ctx = NULL;
-    if ((ctx = automaton_get_context(ctx_vector.ctx_num)) == NULL) {
-        errcode = MBED_ERROR_INVSTATE;
-        goto err;
-    }
+
+    ctx = (automaton_context_t *)&(ctx_vector.contexts[ctx_vector.ctx_num]);
 
     mutex_lock(&ctx_vector.lock);
 
@@ -466,6 +465,8 @@ err:
 mbed_error_t automaton_set_state(const automaton_ctx_handler_t ctxh,
                                  const state_id_t new_state)
 {
+
+    log_printf("%s: => %d\n", __func__, new_state);
     mbed_error_t errcode = MBED_ERROR_NONE;
     automaton_context_t *ctx = NULL;
 

@@ -55,7 +55,7 @@ config USR_LIB_AUTOMATON_HANDLE_CHECKPOINTS
 
 config USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE
    int "Set maximum number of transition per states"
-   range 2 16
+   range 2 18
    ---help---
    This defines the number of cells of the automaton_transition_t structure the
    application must declare to the libautomaton.
