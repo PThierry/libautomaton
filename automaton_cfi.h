@@ -28,7 +28,6 @@
 #include "api/libautomaton.h"
 #include "libc/types.h"
 #include "libc/stdio.h"
-#include "autoconf.h"
 
 /* Nothing here by now, as CFI functions are exported to api/libautomaton.h */
 

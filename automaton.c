@@ -21,7 +21,6 @@
  * Franklin St, Fifth Floor, Boston, MA 02110-1301 USA
  *
  */
-#include "autoconf.h"
 #include "api/libautomaton.h"
 #include "libc/types.h"
 #include "libc/stdio.h"

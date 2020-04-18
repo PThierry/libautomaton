@@ -26,7 +26,6 @@
 #define AUTOMATON_DATA_INTEGRITY_H_
 
 #include "api/libautomaton.h"
-#include "autoconf.h"
 #include "libc/types.h"
 #include "libc/stdio.h"
 #include "automaton.h"

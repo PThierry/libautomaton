@@ -28,7 +28,6 @@
 #include "api/libautomaton.h"
 #include "libc/types.h"
 #include "libc/stdio.h"
-#include "autoconf.h"
 
 #define AUTOMATON_DEBUG CONFIG_USR_LIB_AUTOMATON_DEBUG
 

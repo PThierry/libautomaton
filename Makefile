@@ -107,7 +107,7 @@ frama-c:
 	            -warn-unsigned-overflow \
 				-kernel-msg-key pp \
 				-no-frama-c-stdlib \
-				-cpp-extra-args="-nostdinc -I../std/api -I../../include/generated" \
+				-cpp-extra-args="-nostdinc -I../std/api -Iframac" \
 		    -rte \
 		    -eva \
 		    -wp-dynamic \
