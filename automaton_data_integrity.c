@@ -1,4 +1,6 @@
 #include "automaton_data_integrity.h"
+
+#if 0
 #if CONFIG_USR_LIB_AUTOMATON_DATA_INTEGRITY_CHECK
 # ifndef __FRAMAC__
 #  include "libfw.h"
@@ -6,9 +8,15 @@
     /* In Frama-C mode, we get back the crc32 implementation locally (local copy of fw_crc32.c content) */
 # endif
 #endif
+#endif
 
 
-#ifdef __FRAMAC__
+//#ifdef __FRAMAC__
+// TODO: crc32 primitive should be placed somewhere else that in libfirmware. This is a hash
+// function, and should be added to a dedicated 'libcrypto' handling various hashes, including
+// hmac, crc32, sha256 and so on.
+// In the meantime, crc32 is keeped here.
+//
 static const unsigned int crc32_tab[] =
 {
 0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f, 0xe963a535, 0x9e6495a3,
@@ -80,7 +88,7 @@ static uint32_t crc32 (const unsigned char *buf, uint32_t len, uint32_t init)
     }
     return crc32;
 }
-#endif/*!__FRAMAC__*/
+//#endif/*!__FRAMAC__*/
 
 #if CONFIG_USR_LIB_AUTOMATON_DATA_INTEGRITY_CHECK
 /*@
