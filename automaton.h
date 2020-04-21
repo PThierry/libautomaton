@@ -65,23 +65,39 @@ typedef struct {
 typedef struct {
     uint8_t             state_number;               /*< number of state for automaton */
     uint8_t             transition_number;          /*< number of transition for automaton */
+#if defined(__FRAMAC__)
+    secure_state_id_t state;                      /*< current state */
+    uint32_t   state_lock;                /*< state WR access lock */
+#else
     volatile secure_state_id_t state;                      /*< current state */
-    const automaton_transition_t * const * state_automaton; /*< declared state automaton */
     volatile uint32_t   state_lock;                /*< state WR access lock */
+#endif/*!FRAMAC*/
+    const automaton_transition_t * const * state_automaton; /*< declared state automaton */
 
 #if CONFIG_USR_LIB_AUTOMATON_DATA_INTEGRITY_CHECK
     uint32_t            crc;
 #endif
 #if CONFIG_USR_LIB_AUTOMATON_CONTROL_FLOW_INTEGRITY
+# if defined(__FRAMAC__)
+    automaton_transition_request_t    req;
+    secure_bool_t           waiting_req;
+# else
     volatile automaton_transition_request_t    req;
     volatile secure_bool_t           waiting_req;
+# endif/*!FRAMAC*/
 #endif
 } automaton_context_t;
 
 typedef struct {
-    volatile uint32_t   lock;
-    volatile uint8_t        ctx_num;
+# if defined(__FRAMAC__)
+    uint32_t            lock;
+    uint8_t             ctx_num;
+    secure_bool_t       initialized;
+#else
+    volatile uint32_t            lock;
+    volatile uint8_t             ctx_num;
     volatile secure_bool_t       initialized;
+#endif/*!FRAMAC*/
     automaton_context_t contexts[CONFIG_USR_LIB_AUTOMATON_MAX_CONTEXT_NUM];
 } automaton_ctx_vector_t;
 

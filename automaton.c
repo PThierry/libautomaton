@@ -106,7 +106,11 @@ static const secure_transition_id_t transition_translate_tab[] = {
 /*
  * all set to 0. By default, global libautomaton context is set as not initialized.
  */
+#if defined(__FRAMAC__)
+static automaton_ctx_vector_t ctx_vector = { 0 };
+#else
 static volatile automaton_ctx_vector_t ctx_vector = { 0 };
+#endif
 
 /**********************************************
  * automaton local utility functions
@@ -566,7 +570,10 @@ mbed_error_t automaton_get_next_state(__in  const automaton_ctx_handler_t     ct
 
     /* TODO: howto define the special case of unpredictable target state ? */
 
-    /*@ loop invariant 0 <= i <= CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE;
+    /*@  requires \valid(ctx->state_automaton+(0..current_state)); */
+
+    /*@
+      @ loop invariant 0 <= i <= CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE;
       @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state]->transition[i].transition_id != transition;
       @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state]->transition[i].valid == true;
       @ loop assigns i;
@@ -577,6 +584,8 @@ mbed_error_t automaton_get_next_state(__in  const automaton_ctx_handler_t     ct
 
         /* no more valid transition for this state, this transition does not exist for
          * this state. */
+
+        /*@ requires \valid(&ctx->state_automaton[current_state]->transition[i]); */
         if (ctx->state_automaton[current_state]->transition[i].valid == false) {
             errcode = MBED_ERROR_INVSTATE;
             goto err;
@@ -654,7 +663,10 @@ secure_bool_t automaton_is_valid_transition(__in  const automaton_ctx_handler_t 
         goto err;
     }
 
-    /*@ loop invariant 0 <= i <= CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE;
+    /*@ requires \valid(ctx->state_automaton+(0..current_state)); */
+
+    /*@
+      @ loop invariant 0 <= i <= CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE;
       @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state]->transition[i].transition_id != transition;
       @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state]->transition[i].valid == true;
       @ loop assigns i;
@@ -663,6 +675,7 @@ secure_bool_t automaton_is_valid_transition(__in  const automaton_ctx_handler_t 
       @*/
     for (i = 0; i < CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE; ++i) {
 
+        /*@ requires \valid(&ctx->state_automaton[current_state]->transition[i]); */
         /* no more valid transition for this state, just leave */
         if (ctx->state_automaton[current_state]->transition[i].valid == false) {
             goto err;
