@@ -629,10 +629,6 @@ mbed_error_t automaton_get_next_state(__in  const automaton_ctx_handler_t     ct
          * this state. */
 
         /*@ requires \valid(&ctx->state_automaton[current_state].transitions[i]); */
-        if (ctx->state_automaton[current_state].transitions[i].valid == false) {
-            errcode = MBED_ERROR_INVSTATE;
-            goto err;
-        }
         /* hardened if, requiring O0 */
         if (ctx->state_automaton[current_state].transitions[i].transition_id == transition &&
             !(ctx->state_automaton[current_state].transitions[i].transition_id != transition))
@@ -725,10 +721,6 @@ secure_bool_t automaton_is_valid_transition(__in  const automaton_ctx_handler_t 
     for (i = 0; i < ctx->state_automaton[current_state].num_transitions; ++i) {
 
         /*@ requires \valid(&ctx->state_automaton[current_state].transitions[i]); */
-        /* no more valid transition for this state, just leave */
-        if (ctx->state_automaton[current_state].transitions[i].valid == false) {
-            goto err;
-        }
         /* hardened if, requiring O0 */
         if (ctx->state_automaton[current_state].transitions[i].transition_id == transition &&
             !(ctx->state_automaton[current_state].transitions[i].transition_id != transition)) {
@@ -778,13 +770,11 @@ int main(void)
               .transition_id = FRAMAC_SAMPLE_TRANS_0,
               .target_state  = FRAMAC_SAMPLE_STATE_1,
               .predictable   = true,
-              .valid         = true
             },
             {
               .transition_id = FRAMAC_SAMPLE_TRANS_1,
               .target_state  = FRAMAC_SAMPLE_STATE_2,
               .predictable   = true,
-              .valid         = true
             }
     };
 
@@ -794,7 +784,6 @@ int main(void)
               .transition_id = FRAMAC_SAMPLE_TRANS_2,
               .target_state  = FRAMAC_SAMPLE_STATE_2,
               .predictable   = true,
-              .valid         = true
             }
     };
 
@@ -804,7 +793,6 @@ int main(void)
               .transition_id = FRAMAC_SAMPLE_TRANS_3,
               .target_state  = FRAMAC_SAMPLE_STATE_0,
               .predictable   = true,
-              .valid         = true
             }
     };
 

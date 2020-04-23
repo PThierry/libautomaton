@@ -143,8 +143,9 @@ frama-c:
 		    -wp-split -wp-literals \
 			-wp-model "Typed+ref+int+float" \
 			-wp-timeout $(TIMEOUT) -save $(SESSION) \
-	    	-wp-prover alt-ergo,cvc4,cvc4-ce,z3,z3-ce,z3-nobv \
 	        -then -report
+
+#-wp-prover alt-ergo,cvc4,cvc4-ce,z3,z3-ce,z3-nobv \
 
 frama-c-gui:
 	frama-c-gui -load $(SESSION)

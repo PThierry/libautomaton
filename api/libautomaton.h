@@ -69,7 +69,6 @@ typedef struct {
     transition_id_t transition_id;   /*< transition identifier */
     state_id_t      target_state;    /*< target state (when predictable) */
     bool            predictable;      /*< is transition predictable (depends only on current state) */
-    bool            valid;      /*< is this transaction field exists or is it an empty cell ? */
 } transition_spec_t;
 
 
