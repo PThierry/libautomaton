@@ -617,8 +617,8 @@ mbed_error_t automaton_get_next_state(__in  const automaton_ctx_handler_t     ct
 
     /*@
       @ loop invariant 0 <= i <= ctx->state_automaton[current_state].num_transitions;
-      @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state].transition[i].transition_id != transition;
-      @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state].transition[i].valid == true;
+      @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state].transitions[i].transition_id != transition;
+      @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state].transitions[i].valid == true;
       @ loop assigns i;
       @ loop assigns *newstate;
       @ loop variant ctx->state_automaton[current_state].num_transitions - i;
@@ -628,7 +628,7 @@ mbed_error_t automaton_get_next_state(__in  const automaton_ctx_handler_t     ct
         /* no more valid transition for this state, this transition does not exist for
          * this state. */
 
-        /*@ requires \valid(&ctx->state_automaton[current_state].transition[i]); */
+        /*@ requires \valid(&ctx->state_automaton[current_state].transitions[i]); */
         if (ctx->state_automaton[current_state].transitions[i].valid == false) {
             errcode = MBED_ERROR_INVSTATE;
             goto err;
@@ -677,7 +677,7 @@ err:
   @     ensures \result == SECURE_FALSE;
   @
   @ ensures \result == SECURE_TRUE
-  @   ==> \exists integer i; 0 <= i < ctx_vector.contexts[ctxh].state_automaton[current_state].num_transitions && ctx_vector.contexts[ctxh].state_automaton[current_state].transition[i].transition_id == transition;
+  @   ==> \exists integer i; 0 <= i < ctx_vector.contexts[ctxh].state_automaton[current_state].num_transitions && ctx_vector.contexts[ctxh].state_automaton[current_state].transitions[i].transition_id == transition;
   @*/
 secure_bool_t automaton_is_valid_transition(__in  const automaton_ctx_handler_t     ctxh,
                                             __in  const state_id_t                  current_state,
@@ -716,15 +716,15 @@ secure_bool_t automaton_is_valid_transition(__in  const automaton_ctx_handler_t 
 
     /*@
       @ loop invariant 0 <= i <= ctx->state_automaton[current_state].num_transitions;
-      @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state].transition[i].transition_id != transition;
-      @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state].transition[i].valid == true;
+      @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state].transitions[i].transition_id != transition;
+      @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state].transitions[i].valid == true;
       @ loop assigns i;
       @ loop assigns result;
       @ loop variant ctx->state_automaton[current_state].num_transitions - i;
       @*/
     for (i = 0; i < ctx->state_automaton[current_state].num_transitions; ++i) {
 
-        /*@ requires \valid(&ctx->state_automaton[current_state]->transition[i]); */
+        /*@ requires \valid(&ctx->state_automaton[current_state].transitions[i]); */
         /* no more valid transition for this state, just leave */
         if (ctx->state_automaton[current_state].transitions[i].valid == false) {
             goto err;
@@ -758,7 +758,7 @@ typedef enum {
     FRAMAC_SAMPLE_TRANS_1,
     FRAMAC_SAMPLE_TRANS_2,
     FRAMAC_SAMPLE_TRANS_3,
-} framac_sample_state_t;
+} framac_sample_trans_t;
 
 /*
  * Support for Frama-C testing
@@ -773,7 +773,7 @@ int main(void)
 
 
     /* transitions for state 0 */
-    static const transition_spec_t state_0_trans_tab[] = {
+    static const transition_spec_t state_0_trans_tab[] = {
             {
               .transition_id = FRAMAC_SAMPLE_TRANS_0,
               .target_state  = FRAMAC_SAMPLE_STATE_1,
@@ -789,7 +789,7 @@ int main(void)
     };
 
     /*transitions for state 1 */
-    static const transition_spec_t state_1_trans_tab[] = {
+    static const transition_spec_t state_1_trans_tab[] = {
     {
               .transition_id = FRAMAC_SAMPLE_TRANS_2,
               .target_state  = FRAMAC_SAMPLE_STATE_2,
@@ -799,7 +799,7 @@ int main(void)
     };
 
     /*transitions for state 2 */
-    static const transition_spec_t state_2_trans_tab[] = {
+    static const transition_spec_t state_2_trans_tab[] = {
             {
               .transition_id = FRAMAC_SAMPLE_TRANS_3,
               .target_state  = FRAMAC_SAMPLE_STATE_0,
