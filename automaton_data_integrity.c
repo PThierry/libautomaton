@@ -78,11 +78,21 @@ static const unsigned int crc32_tab[] =
 
 #define UPDC32(octet, crc) (crc32_tab[((crc) ^ (octet)) & 0xff] ^ ((crc) >> 8))
 
+/*@
+  requires \valid(buf+(0..len-1));
+  assigns \nothing;
+ */
 static uint32_t crc32 (const unsigned char *buf, uint32_t len, uint32_t init)
 {
     uint32_t crc32;
     crc32 = init;
-    for(uint32_t i = 0; i < len; i++)
+    uint32_t i = 0;
+    /*@
+       loop invariant 0 <= i < len;
+       loop assigns i;
+       loop variant len -i;
+     */
+    for(i = 0; i < len; i++)
     {
         crc32 = UPDC32(buf[i], crc32);
     }

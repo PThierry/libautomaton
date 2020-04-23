@@ -72,7 +72,7 @@ typedef struct {
     volatile secure_state_id_t state;                      /*< current state */
     volatile uint32_t   state_lock;                /*< state WR access lock */
 #endif/*!FRAMAC*/
-    const automaton_transition_t * const * state_automaton; /*< declared state automaton */
+    const automaton_state_t *state_automaton; /*< declared state automaton */
 
 #if CONFIG_USR_LIB_AUTOMATON_DATA_INTEGRITY_CHECK
     uint32_t            crc;

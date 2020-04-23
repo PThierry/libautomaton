@@ -74,9 +74,10 @@ typedef struct {
 
 
 typedef struct {
-    state_id_t      state;
-    transition_spec_t transition[CONFIG_USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE];
-} automaton_transition_t;
+    state_id_t               state;
+    uint8_t                  num_transitions;
+    const transition_spec_t *transitions;
+} automaton_state_t;
 
 /* contexts are opaque contents, upper layer get back a handler, corresponding to the
  * cell identifier in the contexts vector. This avoid any direct access to the context data,
@@ -108,7 +109,7 @@ mbed_error_t automaton_initialize(void);
  */
 mbed_error_t automaton_declare_context(__in  const uint8_t num_states,
                                        __in  const uint8_t num_transition,
-                                       __in  const automaton_transition_t *const * const state_automaton,
+                                       __in  const automaton_state_t * state_automaton,
                                        __out automaton_ctx_handler_t *ctxh);
 
 /*

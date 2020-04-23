@@ -44,7 +44,7 @@ config USR_LIB_AUTOMATON_CONTROL_FLOW_INTEGRITY
 
 
 config USR_LIB_AUTOMATON_HANDLE_CHECKPOINTS
-   bool "Enable data integrity check in automaton contexts"
+   bool "Enable automaton checkpoints"
    default n
    ---help---
    Add checkpoints validation for critical states. This is a complementary mechanism to the
@@ -52,13 +52,6 @@ config USR_LIB_AUTOMATON_HANDLE_CHECKPOINTS
    is defined and the automaton verifies that all of them have been previously reached at
    least one time before entering the critical state.
 
-
-config USR_LIB_AUTOMATON_MAX_TRANSITION_PER_STATE
-   int "Set maximum number of transition per states"
-   range 2 18
-   ---help---
-   This defines the number of cells of the automaton_transition_t structure the
-   application must declare to the libautomaton.
 
 endmenu
 
