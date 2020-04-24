@@ -114,8 +114,8 @@ mbed_error_t automaton_declare_context(__in  const uint8_t num_states,
 /*
  * Get the current automaton state for the given automaton handler
  */
-state_id_t automaton_get_state(__in  const automaton_ctx_handler_t ctxh,
-                               __out state_id_t                   *state);
+mbed_error_t automaton_get_state(__in  const automaton_ctx_handler_t ctxh,
+                                 __out state_id_t                   *state);
 
 /*
  * Set a new state for the automaton. Executed by transition request functions.
