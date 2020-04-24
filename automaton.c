@@ -457,8 +457,8 @@ err:
   @ complete behaviors;
   @ disjoint behaviors;
   @*/
-state_id_t automaton_get_state(__in  const automaton_ctx_handler_t ctxh,
-                               __out state_id_t                   *state)
+mbed_error_t automaton_get_state(__in  const automaton_ctx_handler_t ctxh,
+                                 __out state_id_t                   *state)
 {
     mbed_error_t errcode = MBED_ERROR_INVPARAM;
     automaton_context_t *ctx = NULL;
@@ -618,22 +618,17 @@ mbed_error_t automaton_get_next_state(__in  const automaton_ctx_handler_t     ct
     /*@
       @ loop invariant 0 <= i <= ctx->state_automaton[current_state].num_transitions;
       @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state].transitions[i].transition_id != transition;
-      @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state].transitions[i].valid == true;
       @ loop assigns i;
       @ loop assigns *newstate;
+      @
       @ loop variant ctx->state_automaton[current_state].num_transitions - i;
       @*/
     for (i = 0; i < ctx->state_automaton[current_state].num_transitions; ++i) {
-
-        /* no more valid transition for this state, this transition does not exist for
-         * this state. */
-
         /*@ requires \valid(&ctx->state_automaton[current_state].transitions[i]); */
         /* hardened if, requiring O0 */
         if (ctx->state_automaton[current_state].transitions[i].transition_id == transition &&
             !(ctx->state_automaton[current_state].transitions[i].transition_id != transition))
         {
-
             if (ctx->state_automaton[current_state].transitions[i].predictable) {
                 *newstate = ctx->state_automaton[current_state].transitions[i].target_state;
                 errcode = MBED_ERROR_NONE;
@@ -713,7 +708,6 @@ secure_bool_t automaton_is_valid_transition(__in  const automaton_ctx_handler_t 
     /*@
       @ loop invariant 0 <= i <= ctx->state_automaton[current_state].num_transitions;
       @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state].transitions[i].transition_id != transition;
-      @ loop invariant \forall integer j; 0 <= j < i ==> ctx->state_automaton[current_state].transitions[i].valid == true;
       @ loop assigns i;
       @ loop assigns result;
       @ loop variant ctx->state_automaton[current_state].num_transitions - i;
@@ -780,7 +774,7 @@ int main(void)
 
     /*transitions for state 1 */
     static const transition_spec_t state_1_trans_tab[] = {
-    {
+            {
               .transition_id = FRAMAC_SAMPLE_TRANS_2,
               .target_state  = FRAMAC_SAMPLE_STATE_2,
               .predictable   = true,
@@ -797,7 +791,7 @@ int main(void)
     };
 
 
-    static const automaton_state_t automaton[] = {
+    static const automaton_state_t framac_automaton[] = {
         {
           .state = FRAMAC_SAMPLE_STATE_0,
           .num_transitions = 2,
@@ -814,39 +808,49 @@ int main(void)
           .transitions = &state_2_trans_tab[0]
         }
     };
+
     automaton_initialize();
-    automaton_declare_context(num_states, num_transitions, (const automaton_state_t *)&automaton[0], &ctxh);
+    automaton_declare_context(num_states, num_transitions, &framac_automaton[0], &ctxh);
 
     /* initial state */
     automaton_set_state(ctxh, 0);
 
    /* now, everything can be corrupted */
 
-    uint8_t cur_trans = Frama_C_interval(0, 255);
+    uint8_t trans_tab[] = {
+        FRAMAC_SAMPLE_TRANS_0,
+        FRAMAC_SAMPLE_TRANS_2,
+        FRAMAC_SAMPLE_TRANS_3,
+        FRAMAC_SAMPLE_TRANS_1,
+        FRAMAC_SAMPLE_TRANS_3,
+    };
+    framac_sample_trans_t cur_trans;
     /* imagine we generate any possible invalid values for ctxh */
-    ctxh = Frama_C_interval(0, 255);
-
-    automaton_push_transition_request(ctxh, cur_trans);
-    switch(cur_trans) {
-        case 0: {
-            automaton_execute_transition_request(ctxh);
+    //ctxh = Frama_C_interval(0, 255);
+    for (uint8_t i = 0; i < sizeof(trans_tab)/sizeof(uint8_t); ++i) {
+        cur_trans = trans_tab[i];
+        automaton_push_transition_request(ctxh, cur_trans);
+        switch(cur_trans) {
+            case 0: {
+                        automaton_execute_transition_request(ctxh);
+                    }
+                    break;
+            case 1: {
+                        automaton_execute_transition_request(ctxh);
+                    }
+                    break;
+            case 2: {
+                        automaton_execute_transition_request(ctxh);
+                    }
+                    break;
+            case 3: {
+                        automaton_execute_transition_request(ctxh);
+                    }
+                    break;
+            default:
+                    break;
         }
-        break;
-        case 1: {
-            automaton_execute_transition_request(ctxh);
-        }
-        break;
-        case 2: {
-            automaton_execute_transition_request(ctxh);
-        }
-        break;
-        case 3: {
-            automaton_execute_transition_request(ctxh);
-        }
-        break;
-        default:
-        break;
+        automaton_postcheck_transition_request(ctxh);
     }
-    automaton_postcheck_transition_request(ctxh);
 }
 #endif/*!__FRAMAC__*/
