@@ -137,7 +137,7 @@ static const secure_transition_id_t transition_translate_tab[] = {
 #if defined(__FRAMAC__)
 static automaton_ctx_vector_t ctx_vector = { 0 };
 #else
-static volatile automaton_ctx_vector_t ctx_vector = { 0 };
+static automaton_ctx_vector_t ctx_vector = { 0 };
 #endif
 
 /**********************************************

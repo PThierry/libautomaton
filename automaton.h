@@ -70,7 +70,7 @@ typedef struct {
     uint32_t   state_lock;                /*< state WR access lock */
 #else
     volatile secure_state_id_t state;                      /*< current state */
-    volatile uint32_t   state_lock;                /*< state WR access lock */
+    uint32_t   state_lock;                /*< state WR access lock */
 #endif/*!FRAMAC*/
     const automaton_state_t *state_automaton; /*< declared state automaton */
 
@@ -94,7 +94,7 @@ typedef struct {
     uint8_t             ctx_num;
     secure_bool_t       initialized;
 #else
-    volatile uint32_t            lock;
+    uint32_t            lock;
     volatile uint8_t             ctx_num;
     volatile secure_bool_t       initialized;
 #endif/*!FRAMAC*/
